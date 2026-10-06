@@ -21,7 +21,7 @@
 | ID | Outcome |
 |---|---|
 | D-26 (result) | The MCP Python SDK (v2.3.0) installed, but the build uses the **minimal JSON-RPC-over-HTTP client/server** (`backend/app/mcp/client.py`, `fixtures/servers/base.py`): it serves and hashes raw tool dicts byte-for-byte, so no SDK layer can normalize what is hashed, and fixtures stay fully controllable. `mcp` was removed from dependencies. |
-| D-28 | Evaluation numbers are produced by `scripts/evaluate.py` only. LLM-only/combined are reported "not run" unless `ANALYZER_API_KEY` is set. Public-sample entries are paraphrased with unverified source URLs (`source_verified: false`). |
+| D-28 | Evaluation numbers are produced by `scripts/evaluate.py` only. LLM-only/combined are reported "not run" unless `ANALYZER_API_KEY` is set. Public-sample entries are illustrative (modeled on published attack classes); sources were checked after the fact, see `fixtures/evaluation/SOURCES.md`. |
 | D-29 | Fixture rug-pull tool is `fetch_report` (not `search_documents`) so multiple scenarios can coexist on one dashboard without tripping the name-collision rule; the shadow fixture (G) is the one that collides with `search_documents` on purpose. |
 
 ### D-30 Scanner v2 and the in-sample caveat

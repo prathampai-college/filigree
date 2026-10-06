@@ -60,8 +60,8 @@ after seeing the v1 misses, so each set means something different:
 
 Read v3 as the honest number: roughly 6 in 10 poisoned tools blocked outright and 8 in 10 flagged for review, on team-authored
 samples. Rug-pull drift detection is 100% (5/5) with 0/15 false drift; scanner latency p50 0.08 ms. Raw files:
-`fixtures/evaluation/results*.json` (`results_v1_pretuning.json` keeps the original numbers). Public-sample texts are
-**paraphrased** and their URLs are from memory (`source_verified: false`): verify before quoting.
+`fixtures/evaluation/results*.json` (`results_v1_pretuning.json` keeps the original numbers). The 12 "public" samples are
+**illustrative**: modeled on published attack classes, not quoted from them (checked 2026-10-06, see `fixtures/evaluation/SOURCES.md`; one cited link is dead).
 
 Remaining known misses: paraphrases without a known path or verb ("private configuration directory"), cross-field references,
 "keychain"-style paths on other OSes, non-English concealment. Those are for the advisory LLM stage and human review.

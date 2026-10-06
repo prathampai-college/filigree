@@ -39,7 +39,7 @@ export function Evaluation({ tick }: { tick: number }) {
         <tbody>
           {['authored.json', 'public_heldout.json', 'evasive.json', 'ALL'].map((s) => (
             <tr key={s} className="border-t border-zinc-800">
-              <td className="py-1">{s.replace('.json', '')}</td>
+              <td className="py-1">{s.replace('.json', '')}{s === 'public_heldout.json' ? ' (illustrative)' : ''}</td>
               <td>{f(e.scanner[s].recall_blocked_pct)} / {f(e.scanner[s].recall_flagged_pct)}</td>
               <td>{llmRun ? `${f(e.llm[s].recall_blocked_pct)} / ${f(e.llm[s].recall_flagged_pct)}` : 'not run'}</td>
               <td>{llmRun ? `${f(e.combined[s].recall_blocked_pct)} / ${f(e.combined[s].recall_flagged_pct)}` : 'not run'}</td>
