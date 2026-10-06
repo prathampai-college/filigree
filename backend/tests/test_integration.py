@@ -229,7 +229,8 @@ async def test_llm_agent_replay_reports_k_of_n(api, tmp_path, monkeypatch):
     run = lambda ok: {"succeeded": ok, "log": ["Model called read_file({})"] if ok else ["Model said: no"]}
     f = tmp_path / "r.json"
     f.write_text(json.dumps({"models": {"groq/a": {"temperature": 0.7, "recorded_at": "2026-10-06", "runs": {"srv-poisoned:search_documents": [run(False), run(True)]}},
-                                        "groq/b": {"temperature": 0.7, "recorded_at": "2026-10-06", "runs": {"srv-poisoned:search_documents": [run(False), run(False)]}}}}))
+                                        "groq/b": {"temperature": 0.7, "recorded_at": "2026-10-06", "runs": {"srv-poisoned:search_documents": [run(False), run(False)]}},
+                                        "groq/c": {"temperature": 0.7, "recorded_at": "2026-10-06", "runs": {"srv-cloak:search_documents": [run(True)]}}}}))  # c: not recorded on this case
     monkeypatch.setattr(llm_agent, "REPLAY_PATH", f)
     r = (await api.post("/api/demo/attack", json={"server_id": "srv-poisoned", "tool": "search_documents", "protected": False, "agent": "llm"})).json()
     assert r["followed"] == "1/4" and r["succeeded"] and "groq/a: leaked the secret in 1 of 2" in "\n".join(r["log"])

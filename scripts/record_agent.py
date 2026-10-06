@@ -3,6 +3,7 @@
 Each (server, tool) is run N times WITHOUT Filigree for each model; every run is kept, including the ones where the model
 was not fooled. A benign control (no poison) is recorded too. The task and temperature are fixed up front, never tuned to
 get a leak. Saved after each complete case; an API failure aborts and never writes a partial case. Re-running fills only missing cases.
+Parallel (limits are per model): REPLAY_OUT=/tmp/a.json uv run ... script.py 5 <model> &  then merge the files by model name.
 Usage: uv run --project backend python scripts/record_agent.py [N] [model ...]   (default N=10, model from .env)
 """
 import asyncio
@@ -52,7 +53,7 @@ async def record(ctx, api, n: int, done: dict, save) -> tuple[str, dict]:
 
 def entry(api, n: int, runs: dict) -> tuple[str, dict]:
     a = LiveAnalyzer(api)
-    return f"{a.provider}/{a.model}", {"temperature": llm_agent.TEMPERATURE, "runs_per_case": n,
+    return f"{a.provider}/{a.model}", {"temperature": llm_agent.TEMPERATURE, "runs_per_case": max(map(len, runs.values()), default=0),
                                        "recorded_at": datetime.date.today().isoformat(), "runs": runs}
 
 
@@ -74,7 +75,8 @@ async def main(n: int, models: list[str]):
         a = LiveAnalyzer(api)
         def save(nr):
             out["models"][nr[0]] = nr[1]
-            llm_agent.REPLAY_PATH.write_text(json.dumps(out, indent=1, ensure_ascii=False), encoding="utf-8")
+            dest = Path(os.environ.get("REPLAY_OUT") or llm_agent.REPLAY_PATH)  # parallel runs: one output file per model, merged after
+            dest.write_text(json.dumps(out, indent=1, ensure_ascii=False), encoding="utf-8")
         name, _ = await record(ctx, api, n, out["models"].get(f"{a.provider}/{a.model}", {}).get("runs", {}), save)
         print(f"recorded {name} -> {llm_agent.REPLAY_PATH}")
 

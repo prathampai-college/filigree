@@ -47,7 +47,7 @@ async def chat(agent: LiveAnalyzer, messages: list[dict], fns: list[dict]) -> di
         except httpx.HTTPStatusError as e:
             if e.response.status_code != 429 or attempt == RETRIES - 1:
                 raise
-            await asyncio.sleep(min(float(e.response.headers.get("retry-after", 2 * (attempt + 1))), 60))
+            await asyncio.sleep(min(float(e.response.headers.get("retry-after", 5 * (attempt + 1))), 60))
 
 
 async def converse(agent, tools: list[dict], call, task: str, chat_fn=chat, max_turns: int = 6, observe=lambda s: None) -> list[str]:
@@ -129,8 +129,10 @@ def run_replay(sid: str, tool_name: str) -> dict:
     key = f"{sid}:{tool_name}"
     try:
         models = json.loads(REPLAY_PATH.read_text(encoding="utf-8"))["models"]
+        models = {m: d for m, d in models.items() if key in d["runs"]}  # a model not recorded on this case is skipped
         stats = {m: (sum(r["succeeded"] for r in d["runs"][key]), len(d["runs"][key])) for m, d in models.items()}
-    except (OSError, KeyError, ValueError):
+        models[next(iter(models))]  # nothing recorded for this case at all
+    except (OSError, KeyError, StopIteration, ValueError):
         return {"succeeded": False, "agent": "llm-recorded", "log": ["No recorded model run for this tool. Re-record: scripts/record_agent.py"]}
     # show a leaked run if any model has one (the statistic below is the honest summary), else the first model's first run
     m = next((m for m in models if stats[m][0]), next(iter(models)))
