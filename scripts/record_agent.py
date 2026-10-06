@@ -2,7 +2,7 @@
 
 Each (server, tool) is run N times WITHOUT Filigree for each model; every run is kept, including the ones where the model
 was not fooled. A benign control (no poison) is recorded too. The task and temperature are fixed up front, never tuned to
-get a leak. Any API failure aborts without writing. Models are merged into the file by name.
+get a leak. Saved after each complete case; an API failure aborts and never writes a partial case. Re-running fills only missing cases.
 Usage: uv run --project backend python scripts/record_agent.py [N] [model ...]   (default N=10, model from .env)
 """
 import asyncio
@@ -30,7 +30,7 @@ CASES = [("poisoned", "srv-poisoned", "search_documents"), ("invisible", "srv-in
          ("results", "srv-results", "find_files"), ("results", "srv-results", "fetch_notes")]
 
 
-async def record(ctx, api, n: int, done: dict) -> tuple[str, dict]:
+async def record(ctx, api, n: int, done: dict, save) -> tuple[str, dict]:
     runs = dict(done)  # cases already recorded for this model are kept, not re-run
     for name, sid, tool in CASES:
         if f"{sid}:{tool}" in runs:
@@ -46,6 +46,11 @@ async def record(ctx, api, n: int, done: dict) -> tuple[str, dict]:
                 sys.exit(r["log"][0])
             runs.setdefault(f"{sid}:{tool}", []).append({"succeeded": r["succeeded"], "log": r["log"]})
             print(f"{LiveAnalyzer(api).model} {sid}:{tool} run {i + 1}/{n}: {'LEAKED' if r['succeeded'] else 'not fooled'}", flush=True)
+        save(entry(api, n, runs))  # per finished case: a later 429 keeps what is done (never a partial case)
+    return entry(api, n, runs)
+
+
+def entry(api, n: int, runs: dict) -> tuple[str, dict]:
     a = LiveAnalyzer(api)
     return f"{a.provider}/{a.model}", {"temperature": llm_agent.TEMPERATURE, "runs_per_case": n,
                                        "recorded_at": datetime.date.today().isoformat(), "runs": runs}
@@ -57,6 +62,7 @@ async def main(n: int, models: list[str]):
         sys.exit("needs a key in .env (see .env.example)")
     http = httpx.AsyncClient(transport=httpx.ASGITransport(app=fixture_app), base_url="http://fx", timeout=60)
     ctx = svc.Ctx(Store(), MockAnalyzer(), http, fixture_base="http://fx", demo=True)
+    llm_agent.RETRIES = 12  # free-tier per-minute token limits: wait them out
     api = httpx.AsyncClient(timeout=60)  # real network client for the model; fixtures stay in-process
     try:
         out = json.loads(llm_agent.REPLAY_PATH.read_text(encoding="utf-8"))
@@ -66,9 +72,10 @@ async def main(n: int, models: list[str]):
         if m:
             os.environ["ANALYZER_MODEL"] = m
         a = LiveAnalyzer(api)
-        name, rec = await record(ctx, api, n, out["models"].get(f"{a.provider}/{a.model}", {}).get("runs", {}))
-        out["models"][name] = rec
-        llm_agent.REPLAY_PATH.write_text(json.dumps(out, indent=1, ensure_ascii=False), encoding="utf-8")  # per model: a later failure keeps earlier ones
+        def save(nr):
+            out["models"][nr[0]] = nr[1]
+            llm_agent.REPLAY_PATH.write_text(json.dumps(out, indent=1, ensure_ascii=False), encoding="utf-8")
+        name, _ = await record(ctx, api, n, out["models"].get(f"{a.provider}/{a.model}", {}).get("runs", {}), save)
         print(f"recorded {name} -> {llm_agent.REPLAY_PATH}")
 
 
