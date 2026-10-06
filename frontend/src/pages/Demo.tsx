@@ -5,7 +5,7 @@ import { EscapedText } from '../components/HiddenCharMarker'
 import { FindingCard } from '../components/FindingCard'
 import { GatewaySession } from '../components/GatewaySession'
 
-const SCENARIOS: [string, string][] = [['benign', 'Benign'], ['poisoned', 'Poisoned'], ['invisible', 'Invisible-text'], ['rugpull', 'Rug pull'], ['shadow', 'Shadow']]
+const SCENARIOS: [string, string][] = [['benign', 'Benign'], ['poisoned', 'Poisoned'], ['invisible', 'Invisible-text'], ['rugpull', 'Rug pull'], ['shadow', 'Shadow'], ['results', 'Result injection']]
 
 export function Demo({ tick, bump }: { tick: number; bump: () => void }) {
   const [tools, setTools] = useState<ToolTrustView[]>([])
@@ -62,7 +62,7 @@ export function Demo({ tick, bump }: { tick: number; bump: () => void }) {
         {out && (
           <div role="status" className={`rounded border-2 p-4 font-mono text-sm ${out.bad ? 'border-red-500 bg-red-950' : 'border-emerald-500 bg-emerald-950/50'}`}>
             <p className="mb-2 font-bold">{out.title}</p>
-            {out.lines.map((l, i) => <p key={i} className={/ATTACK SUCCEEDED|BLOCKED|leaked the secret in/.test(l) ? 'text-lg font-bold' : ''}>{l}</p>)}
+            {out.lines.map((l, i) => <p key={i} className={/ATTACK SUCCEEDED|BLOCKED|withheld|leaked the secret in/.test(l) ? 'text-lg font-bold' : ''}>{l}</p>)}
           </div>
         )}
       </section>
