@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from .. import service as svc
-from ..agent import scripted
+from ..agent import llm_agent, scripted
 from ..analyzer.impl import CACHE_PATH
 from ..audit import chain
 from ..gate.gate import gate_call
@@ -41,6 +41,7 @@ class AttackBody(BaseModel):
     server_id: str
     tool: str
     protected: bool = True
+    agent: str = "scripted"  # "scripted" | "llm"
 
 
 class PlaygroundBody(BaseModel):
@@ -233,6 +234,8 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
     @app.post("/api/demo/attack")
     async def attack(b: AttackBody):
         demo_only()
+        if b.agent == "llm":
+            return await llm_agent.run(ctx, b.server_id, b.tool, b.protected)
         return await scripted.run_attack(ctx, b.server_id, b.tool, b.protected)
 
     @app.post("/api/playground/analyze")

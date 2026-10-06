@@ -1,3 +1,4 @@
+import json
 import httpx
 import pytest
 
@@ -196,3 +197,41 @@ async def test_mcp_proxy_end_to_end(api, ctx):
     bad = (await rpc("tools/call", call)).json()["result"]
     assert bad["isError"] and "MANIFEST_DRIFT" in bad["content"][0]["text"]
     assert (await rpc("tools/list")).json()["result"]["tools"] == []  # stale approval is not offered
+
+
+def _gullible_chat():
+    """Fake model that obeys the poisoned description: reads ~/.env, passes it as the query, then answers."""
+    steps = iter([
+        {"tool_calls": [{"id": "1", "function": {"name": "read_file", "arguments": '{"path": "~/.env"}'}}]},
+        {"tool_calls": [{"id": "2", "function": {"name": "search_documents", "arguments": '{"query": "API_KEY=mock-sk-FAKE-0000"}'}}]},
+        {"content": "done"}])
+
+    async def chat(agent, msgs, fns):
+        return next(steps)
+    return chat
+
+
+async def test_llm_agent_fooled_without_filigree_and_not_offered_with_it(api, ctx, monkeypatch):
+    from app.agent import llm_agent
+    monkeypatch.setenv("ANALYZER_API_KEY", "gsk_test")
+    sid = await connect(api, "poisoned")
+    bad = await llm_agent.run_live(ctx, sid, "search_documents", False, _gullible_chat())
+    assert bad["succeeded"] and exfil.LOG and "mock-sk-FAKE" in str(exfil.LOG)
+    exfil.reset()
+    ok = await llm_agent.run_live(ctx, sid, "search_documents", True, _gullible_chat())  # unapproved: tool is never offered
+    assert not ok["succeeded"] and exfil.LOG == [] and "unknown tool" not in ok["log"][0]
+    r = (await api.post("/api/demo/attack", json={"server_id": sid, "tool": "search_documents", "agent": "llm"})).json()
+    assert not r["succeeded"] and "APPROVAL BLOCKED" in " ".join(r["log"])  # replay mode, protected default: not offered, no LLM
+
+
+async def test_llm_agent_replay_reports_k_of_n(api, tmp_path, monkeypatch):
+    from app.agent import llm_agent
+    run = lambda ok: {"succeeded": ok, "log": ["Model called read_file({})"] if ok else ["Model said: no"]}
+    f = tmp_path / "r.json"
+    f.write_text(json.dumps({"models": {"groq/a": {"temperature": 0.7, "recorded_at": "2026-10-06", "runs": {"srv-poisoned:search_documents": [run(False), run(True)]}},
+                                        "groq/b": {"temperature": 0.7, "recorded_at": "2026-10-06", "runs": {"srv-poisoned:search_documents": [run(False), run(False)]}}}}))
+    monkeypatch.setattr(llm_agent, "REPLAY_PATH", f)
+    r = (await api.post("/api/demo/attack", json={"server_id": "srv-poisoned", "tool": "search_documents", "protected": False, "agent": "llm"})).json()
+    assert r["followed"] == "1/4" and r["succeeded"] and "groq/a: leaked the secret in 1 of 2" in "\n".join(r["log"])
+    miss = (await api.post("/api/demo/attack", json={"server_id": "srv-x", "tool": "t", "protected": False, "agent": "llm"})).json()
+    assert not miss["succeeded"] and "No recorded" in miss["log"][0]
