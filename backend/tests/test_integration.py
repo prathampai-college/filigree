@@ -290,3 +290,15 @@ async def test_lockfile_verifies_then_catches_rug_pull(api, ctx):
     await api.post("/api/demo/mutate", json={"mode": "modified"})
     problems = await lock.verify(pinned, ctx.http)
     assert len(problems) == 1 and "MANIFEST_DRIFT in tool.description" in problems[0]
+
+
+async def test_check_endpoint_for_hooks(api, ctx):  # scripts/claude_hook.py
+    sid = await connect(api, "rugpull")
+    chk = lambda: api.post("/api/check", json={"server_id": sid, "tool": "fetch_report", "args": {"id": "7"}})
+    assert (await chk()).json()["reason_codes"] == ["NO_APPROVAL"]
+    await api.post(f"/api/tools/{sid}:fetch_report/approve")
+    assert (await chk()).json()["allowed"]
+    await api.post("/api/demo/mutate", json={"mode": "modified"})
+    assert (await chk()).json()["reason_codes"] == ["MANIFEST_DRIFT"]
+    unknown = await api.post("/api/check", json={"server_id": "nope", "tool": "x"})
+    assert unknown.json()["reason_codes"] == ["UNKNOWN_SERVER"]
