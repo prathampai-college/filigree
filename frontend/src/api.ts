@@ -20,6 +20,12 @@ export type Playground = {
   views: ToolTrustView['views']; note: string
 }
 
+export type Arena = {
+  verdict: string; decision: ToolTrustView['decision']; findings: ToolTrustView['analysis']['findings']
+  model: { ran: boolean; fooled: boolean; log: string[] }
+  board: { description: string; scanner: string; fooled: boolean; ran: boolean }[]
+}
+
 export const api = {
   mode: () => j<{ analyzer: 'live' | 'replay'; demo: boolean; recorded: string | null }>('/api/mode'),
   tools: () => j<ToolTrustView[]>('/api/tools'),
@@ -39,6 +45,7 @@ export const api = {
   mutate: (mode = 'modified') => post('/api/demo/mutate', { mode }),
   attack: (server_id: string, tool: string, protected_: boolean, agent: 'scripted' | 'llm' = 'scripted') =>
     post<AttackResult>('/api/demo/attack', { server_id, tool, protected: protected_, agent }),
+  arena: (description: string) => post<Arena>('/api/playground/arena', { description }),
   playground: (description: string, baseline_description?: string) =>
     post<Playground>('/api/playground/analyze', { description, baseline_description }),
 }
