@@ -145,6 +145,8 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
                "execution_count": n("EXECUTION_ALLOWED"), "evaluation": None}
         if EVAL_RESULTS.exists():
             out["evaluation"] = json.loads(EVAL_RESULTS.read_text(encoding="utf-8"))
+        v3 = EVAL_RESULTS.with_name("results_v3_with_llm.json")
+        out["evaluation_v3"] = json.loads(v3.read_text(encoding="utf-8")) if v3.exists() else None
         return out
 
     @app.get("/api/agent/registry")

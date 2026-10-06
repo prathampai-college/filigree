@@ -127,5 +127,5 @@
   "p50": 5915.39,
   "p95": 8633.18
  },
- "note": "Authored sets were written by the team; public samples are paraphrased from write-ups (source_verified=false). Scanner rules were not tuned against these sets after freezing."
+ "note": "Authored sets were written by the team; public samples are paraphrased from write-ups (source_verified=false). Scanner rules were tuned once after seeing v1 misses, so these numbers are in-sample (see v3 for unseen)."
 }

@@ -11,17 +11,30 @@ export function Evaluation({ tick }: { tick: number }) {
   if (!e) return <p>No evaluation results yet. Run <code>uv run --project backend python scripts/evaluate.py</code>.</p>
   const all = e.scanner.ALL
   const llmRun = typeof e.llm !== 'string'
+  const v3 = m.evaluation_v3
   return (
     <div className="space-y-6">
+      {v3 && (
+        <section className="space-y-3">
+          <h2 className="font-semibold">Unseen set v3 ({v3.poisoned} poisoned + {v3.benign} benign, authored after tuning, run once)</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card k="Scanner + LLM: poisoned blocked" v={f(v3.combined.recall_blocked_pct)} />
+            <Card k="Scanner + LLM: benign accepted" v={f(v3.combined.benign_acceptance_pct)} />
+            <Card k="Scanner alone: flagged / blocked" v={`${f(v3.recall_flagged_pct)} / ${f(v3.recall_blocked_pct)}`} />
+            <Card k="Scanner alone: benign accepted" v={f(v3.benign_acceptance_pct)} />
+          </div>
+          <p className="text-xs text-zinc-400">Combined false positives: {v3.combined.false_positives.join(', ') || 'none'}. Scanner misses: {v3.missed.join(', ') || 'none'}. Team-authored samples, not an independent benchmark.</p>
+        </section>
+      )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card k="Poisoning recall (scanner, flagged)" v={f(all.recall_flagged_pct)} />
-        <Card k="Benign acceptance" v={f(all.benign_acceptance_pct)} />
+        <Card k="v1 recall, scanner flagged (in-sample)" v={f(all.recall_flagged_pct)} />
+        <Card k="v1 benign acceptance (in-sample)" v={f(all.benign_acceptance_pct)} />
         <Card k="Drift detection*" v={f(e.drift_recall_pct)} />
         <Card k="Median scanner latency" v={`${e.scanner_latency_ms.p50} ms`} />
       </div>
       <p className="text-xs text-zinc-400">* Within the exact fields and capture path evaluated. False drift from key order/whitespace: {e.false_drift}/{e.false_drift_cases}. Sets frozen: {String(e.sets_frozen_intact)} ({e.frozen_sha256.slice(0, 12)}…).</p>
       <table className="w-full text-left text-sm">
-        <caption className="mb-2 text-left font-semibold">Scanner vs LLM vs combined (recall = blocked / flagged)</caption>
+        <caption className="mb-2 text-left font-semibold">v1 set, in-sample: rules were tuned after seeing its misses (recall = blocked / flagged)</caption>
         <thead className="text-zinc-400"><tr><th>Set</th><th>Scanner</th><th>LLM only</th><th>Combined</th><th>Benign accepted (scanner)</th></tr></thead>
         <tbody>
           {['authored.json', 'public_heldout.json', 'evasive.json', 'ALL'].map((s) => (

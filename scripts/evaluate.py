@@ -89,7 +89,7 @@ async def main():
               "scanner_latency_ms": {"p50": p(lat_s, .5), "p95": p(lat_s, .95)},
               "llm_unavailable": unavailable if live else "not run", "llm_latency_ms": {"p50": p(lat_l, .5), "p95": p(lat_l, .95)} if lat_l else "not run",
               "note": "Authored sets were written by the team; public samples are paraphrased from write-ups (source_verified=false). "
-                      "Scanner rules were not tuned against these sets after freezing."}
+                      "Scanner rules were tuned once after seeing v1 misses, so these numbers are in-sample (see v3 for unseen)."}
     (EV / "results.json").write_text(json.dumps(result, indent=1), encoding="utf-8")
     print(json.dumps({k: result[k] for k in ("sets_frozen_intact", "drift_recall_pct", "false_drift", "scanner_latency_ms")}))
     for sname, s in result["scanner"].items():
