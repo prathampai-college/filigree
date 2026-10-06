@@ -24,12 +24,25 @@ The Playground lets a judge add a zero-width character to an approved descriptio
 
 Each connected server is also exposed at `http://127.0.0.1:8000/mcp/<server_id>` (JSON-RPC over HTTP). `tools/list` returns only
 tools whose approval is currently valid (built from the canonical approved manifest); `tools/call` goes through the gate and returns
-`isError` with the reason code when blocked. Point any HTTP-capable MCP client at it (stdio is not implemented). Test: `test_mcp_proxy_end_to_end`.
+`isError` with the reason code when blocked. Test: `test_mcp_proxy_end_to_end`. The server id is shown on the Tools page.
+
+HTTP clients (Claude Code, Cursor):
+
+```bash
+claude mcp add --transport http filigree http://127.0.0.1:8000/mcp/<server_id>
+```
+
+stdio-only clients (Claude Desktop) use the stdlib bridge `scripts/stdio_bridge.py`. In `claude_desktop_config.json`:
+
+```json
+{ "mcpServers": { "filigree": { "command": "python",
+  "args": ["C:/path/to/hacksprint/scripts/stdio_bridge.py", "<server_id>"] } } }
+```
 
 ## Tests and evaluation
 
 ```bash
-cd backend && uv run pytest                                   # 48 tests: manifest, scanner, policy, gate, rug pull, failure drills
+cd backend && uv run pytest                                   # 49 tests: manifest, scanner, policy, gate, rug pull, failure drills
 python fixtures/evaluation/build_sets.py                      # (re)generate frozen sets; do not tune after freezing
 uv run --project backend python scripts/evaluate.py           # writes fixtures/evaluation/results.json
 ```
@@ -40,7 +53,7 @@ after seeing the v1 misses, so each set means something different:
 | Set | Status for current rules | Poisoned blocked / flagged | Benign accepted |
 |---|---|---|---|
 | v1 (authored + public + evasive, 32+15) before tuning | unbiased | 62.5% / 75.0% | 86.7% |
-| v1 after tuning | **in-sample** (rules written from its misses) | 75.0% / 87.5% | 100% |
+| v1 after tuning | **in-sample** (rules written from its misses) | 78.1% / 90.6% | 100% |
 | v2 (20+20) before tuning | unbiased | 45.0% / 50.0% | 65.0% |
 | v2 after tuning | **in-sample** (tuned after seeing v2 misses) | 95.0% / 100% | 100% |
 | **v3 (12+10), run once, not tuned** | **unseen** | **58.3% / 83.3%** | **90.0%** (false positive: "Silently queue notifications") |
