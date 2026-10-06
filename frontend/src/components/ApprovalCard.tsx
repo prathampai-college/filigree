@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ToolTrustView } from '../types'
-import { short } from '../api'
-import { EscapedText } from './HiddenCharMarker'
+import { needlesFrom, short } from '../api'
+import { MarkedText } from './HiddenCharMarker'
 import { FindingCard } from './FindingCard'
 import { StatusBadge } from './StatusBadge'
 
@@ -18,10 +18,12 @@ type Props = { v: ToolTrustView; onApprove?: (confirm: boolean) => void; onBlock
 // Button rules (DESIGN §5 / D-12): no Approve for high/critical or integrity failure; medium needs a confirmation step.
 export function ApprovalCard({ v, onApprove, onBlock }: Props) {
   const [confirming, setConfirming] = useState(false)
+  const [mark, setMark] = useState(true)
   const reviewing = v.trust_state === 'REVIEW' || v.trust_state === 'STALE'
   const elig = reviewing ? (v.eligibility ?? v.decision) : undefined
   const stale = v.trust_state === 'STALE'
   const reasons = v.decision.reason_codes.join(', ')
+  const needles = needlesFrom(v.analysis.findings.map((f) => f.evidence)).filter((n) => v.views.model_visible_escaped.toLowerCase().includes(n.toLowerCase()))
 
   return (
     <section className="space-y-4">
@@ -61,7 +63,13 @@ export function ApprovalCard({ v, onApprove, onBlock }: Props) {
         </div>
         <div className="rounded border border-zinc-700 bg-zinc-900 p-4">
           <h3 className="text-xs font-semibold text-zinc-400">WHAT THE MODEL RECEIVES · exact registered text</h3>
-          <div className="mt-2"><EscapedText text={v.views.model_visible_escaped} /></div>
+          <div className="mt-2"><MarkedText text={v.views.model_visible_escaped} needles={mark ? needles : []} /></div>
+          {needles.length > 0 && (
+            <label className="mt-2 flex items-center gap-2 text-xs text-zinc-400">
+              <input type="checkbox" checked={mark} onChange={(e) => setMark(e.target.checked)} />
+              Highlight what the scanner flagged ({needles.length})
+            </label>
+          )}
           {v.views.hidden_char_count > 0 && (
             <p className="mt-2 text-sm text-red-300">
               ⚠ {v.views.hidden_char_count} hidden characters

@@ -14,3 +14,18 @@ export function EscapedText({ text, inline = false, collapse = true }: { text: s
   })
   return inline ? <span>{kids}</span> : <p className="font-mono text-sm break-words whitespace-pre-wrap">{kids}</p>
 }
+
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+// Like EscapedText, but also underlines the phrases the scanner matched.
+export function MarkedText({ text, needles }: { text: string; needles: string[] }) {
+  if (!needles.length) return <EscapedText text={text} />
+  const parts = text.split(new RegExp(`(${needles.map(esc).join('|')})`, 'gi'))
+  return (
+    <p className="font-mono text-sm break-words whitespace-pre-wrap">
+      {parts.map((p, i) => i % 2
+        ? <mark key={i} className="rounded bg-amber-400/25 px-0.5 underline decoration-amber-400 decoration-2">{p}</mark>
+        : <EscapedText key={i} text={p} inline />)}
+    </p>
+  )
+}
