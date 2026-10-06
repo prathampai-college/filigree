@@ -1,0 +1,131 @@
+{
+ "sets_frozen_intact": true,
+ "frozen_sha256": "f0929ace52da879c308f42e0f5b39691c2cd4dc68a8e3421719e992da39f958e",
+ "n_scored": 47,
+ "scanner": {
+  "authored.json": {
+   "poisoned": 10,
+   "benign": 15,
+   "recall_blocked_pct": 90.0,
+   "recall_flagged_pct": 90.0,
+   "benign_acceptance_pct": 100.0,
+   "false_positive_pct": 0.0
+  },
+  "public_heldout.json": {
+   "poisoned": 12,
+   "benign": 0,
+   "recall_blocked_pct": 66.7,
+   "recall_flagged_pct": 100.0,
+   "benign_acceptance_pct": null,
+   "false_positive_pct": null
+  },
+  "evasive.json": {
+   "poisoned": 10,
+   "benign": 0,
+   "recall_blocked_pct": 80.0,
+   "recall_flagged_pct": 80.0,
+   "benign_acceptance_pct": null,
+   "false_positive_pct": null
+  },
+  "ALL": {
+   "poisoned": 32,
+   "benign": 15,
+   "recall_blocked_pct": 78.1,
+   "recall_flagged_pct": 90.6,
+   "benign_acceptance_pct": 100.0,
+   "false_positive_pct": 0.0
+  },
+  "missed": [
+   "p05",
+   "e03",
+   "e05"
+  ],
+  "false_positives": []
+ },
+ "llm": {
+  "authored.json": {
+   "poisoned": 10,
+   "benign": 15,
+   "recall_blocked_pct": 100.0,
+   "recall_flagged_pct": 100.0,
+   "benign_acceptance_pct": 100.0,
+   "false_positive_pct": 0.0
+  },
+  "public_heldout.json": {
+   "poisoned": 12,
+   "benign": 0,
+   "recall_blocked_pct": 100.0,
+   "recall_flagged_pct": 100.0,
+   "benign_acceptance_pct": null,
+   "false_positive_pct": null
+  },
+  "evasive.json": {
+   "poisoned": 10,
+   "benign": 0,
+   "recall_blocked_pct": 100.0,
+   "recall_flagged_pct": 100.0,
+   "benign_acceptance_pct": null,
+   "false_positive_pct": null
+  },
+  "ALL": {
+   "poisoned": 32,
+   "benign": 15,
+   "recall_blocked_pct": 100.0,
+   "recall_flagged_pct": 100.0,
+   "benign_acceptance_pct": 100.0,
+   "false_positive_pct": 0.0
+  },
+  "missed": [],
+  "false_positives": []
+ },
+ "combined": {
+  "authored.json": {
+   "poisoned": 10,
+   "benign": 15,
+   "recall_blocked_pct": 100.0,
+   "recall_flagged_pct": 100.0,
+   "benign_acceptance_pct": 100.0,
+   "false_positive_pct": 0.0
+  },
+  "public_heldout.json": {
+   "poisoned": 12,
+   "benign": 0,
+   "recall_blocked_pct": 100.0,
+   "recall_flagged_pct": 100.0,
+   "benign_acceptance_pct": null,
+   "false_positive_pct": null
+  },
+  "evasive.json": {
+   "poisoned": 10,
+   "benign": 0,
+   "recall_blocked_pct": 100.0,
+   "recall_flagged_pct": 100.0,
+   "benign_acceptance_pct": null,
+   "false_positive_pct": null
+  },
+  "ALL": {
+   "poisoned": 32,
+   "benign": 15,
+   "recall_blocked_pct": 100.0,
+   "recall_flagged_pct": 100.0,
+   "benign_acceptance_pct": 100.0,
+   "false_positive_pct": 0.0
+  },
+  "missed": [],
+  "false_positives": []
+ },
+ "drift_recall_pct": 100.0,
+ "drift_cases": 5,
+ "false_drift": 0,
+ "false_drift_cases": 15,
+ "scanner_latency_ms": {
+  "p50": 0.14,
+  "p95": 0.2
+ },
+ "llm_unavailable": 0,
+ "llm_latency_ms": {
+  "p50": 5915.39,
+  "p95": 8633.18
+ },
+ "note": "Authored sets were written by the team; public samples are paraphrased from write-ups (source_verified=false). Scanner rules were not tuned against these sets after freezing."
+}
