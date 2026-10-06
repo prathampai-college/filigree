@@ -169,6 +169,7 @@ async def test_database_down_fails_closed(api, ctx):
 async def test_mcp_proxy_end_to_end(api, ctx):
     sid = await connect(api, "rugpull")
     rpc = lambda m, p=None: api.post(f"/mcp/{sid}", json={"jsonrpc": "2.0", "id": 1, "method": m, **({"params": p} if p else {})})
+    assert (await rpc("ping")).json()["result"] == {}
     assert (await rpc("tools/list")).json()["result"]["tools"] == []  # nothing approved yet
     await api.post(f"/api/tools/{sid}:fetch_report/approve")
     tools = (await rpc("tools/list")).json()["result"]["tools"]

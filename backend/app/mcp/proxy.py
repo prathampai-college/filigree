@@ -18,6 +18,8 @@ def add_proxy(app: FastAPI, ctx: svc.Ctx) -> None:
         if m == "initialize":
             return ok({"protocolVersion": "2025-06-18", "capabilities": {"tools": {}},
                        "serverInfo": {"name": "filigree-gateway", "version": "0"}})
+        if m == "ping":
+            return ok({})
         if m == "tools/list":  # canonical bytes of currently-valid approvals only
             return ok({"tools": [{k: v for k, v in t.items() if k != "server_id"}
                                  for t in scripted.registry(ctx) if t["server_id"] == sid]})
