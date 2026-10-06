@@ -12,7 +12,8 @@ def _blocked(codes, **kw) -> dict:
     return {"allowed": False, "reason_codes": list(codes), "changed_fields": [], "diff": [], "result": None, **kw}
 
 
-async def gate_call(ctx: svc.Ctx, sid: str, tool_name: str, args: dict) -> dict:
+async def gate_call(ctx: svc.Ctx, sid: str, tool_name: str, args: dict, execute: bool = True) -> dict:
+    """execute=False: full check only, the client calls the server itself (Claude Code PreToolUse hook)."""
     store = ctx.store
     try:
         srv = store.server(sid)
@@ -53,7 +54,9 @@ async def gate_call(ctx: svc.Ctx, sid: str, tool_name: str, args: dict) -> dict:
     if secret := runtime.tainted(ctx, args):  # approved tool, but a secret seen earlier is flowing into its arguments
         chain.append(store, "EXECUTION_BLOCKED", sid, tool_name, cur_fp=fp, reason=f"TAINTED_ARGS: {secret[:4]}…")
         return _blocked(["TAINTED_ARGS"])
-    chain.append(store, "EXECUTION_ALLOWED", sid, tool_name, cur_fp=fp)
+    chain.append(store, "EXECUTION_ALLOWED", sid, tool_name, cur_fp=fp, reason=None if execute else "pre-check; client calls the server")
+    if not execute:
+        return {"allowed": True, "reason_codes": [], "changed_fields": [], "diff": [], "result": None}
     result = await ctx.client(srv["endpoint"]).call_tool(tool_name, args)
     runtime.observe(ctx, result)
     flags = runtime.result_injection(result)

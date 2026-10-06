@@ -179,6 +179,12 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
     async def agent_call(b: CallBody):
         return await gate_call(ctx, b.server_id, b.tool, b.args)
 
+    @app.post("/api/check")
+    async def check(b: CallBody):  # same gate, no call: for clients that talk to the server directly (scripts/claude_hook.py)
+        if not ctx.store.server(b.server_id):
+            return {"allowed": False, "reason_codes": ["UNKNOWN_SERVER"], "changed_fields": [], "diff": [], "result": None}
+        return await gate_call(ctx, b.server_id, b.tool, b.args, execute=False)
+
     # ---- demo / playground (FILIGREE_DEMO=1) ----
     @app.get("/api/demo/scenarios")
     def scenarios():
