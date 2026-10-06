@@ -17,7 +17,8 @@ PY = sys.executable
 env = {**os.environ, "FILIGREE_DEMO": "1", "FILIGREE_DB": str(ROOT / "backend" / "demo.db"), "FIXTURE_BASE": "http://127.0.0.1:9000"}
 Path(env["FILIGREE_DB"]).unlink(missing_ok=True)  # 1. reset DB
 
-subprocess.run([PY, str(ROOT / "scripts" / "seed_fixtures.py")], check=True)
+if not (ROOT / "fixtures" / "replay_cache.json").exists():  # never overwrite a recorded cache
+    subprocess.run([PY, str(ROOT / "scripts" / "seed_fixtures.py")], check=True)
 procs = [
     subprocess.Popen([PY, "-m", "uvicorn", "fixtures.servers.host:app", "--port", "9000", "--host", "127.0.0.1"], cwd=ROOT, env=env),
     subprocess.Popen([PY, "-m", "uvicorn", "app.api.main:build", "--factory", "--port", "8000", "--host", "127.0.0.1"], cwd=ROOT / "backend", env=env),

@@ -1,10 +1,14 @@
 """Populate fixtures/replay_cache.json so the demo runs fully offline (`make replay-cache`).
 
-These are AUTHORED analyzer outputs for the demo fixtures, not live model runs. The UI labels them REPLAY MODE.
-Usage: uv run --project backend python scripts/seed_fixtures.py
+Default: AUTHORED analyzer outputs for the demo fixtures (not model output).
+--live: call the configured model once per demo tool and record its real output plus provenance (provider, model, date).
+Any failed call aborts without writing, so authored and recorded entries are never mixed. The UI labels both REPLAY MODE.
+Usage: uv run --project backend python scripts/seed_fixtures.py [--live]
 """
 import asyncio
+import datetime
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -13,11 +17,13 @@ import httpx
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / "backend"), str(ROOT)]
 
-from app.analyzer.base import LlmOutput  # noqa: E402
-from app.analyzer.impl import CACHE_PATH, cache_key  # noqa: E402
+from app.analyzer.base import PROMPT_VERSION, LlmOutput  # noqa: E402
+from app.analyzer.impl import CACHE_PATH, LiveAnalyzer, build_user_message, cache_key, resolve_key  # noqa: E402
 from app.api.main import SCENARIOS  # noqa: E402
+from app.envfile import load_dotenv  # noqa: E402
 from app.manifest.canonicalize import build_manifest, fingerprint  # noqa: E402
 from app.mcp.client import McpClient  # noqa: E402
+from app.scanner.rules import scan  # noqa: E402
 from fixtures.servers.host import app as fixture_app  # noqa: E402
 from fixtures.servers import rug_pull_server  # noqa: E402
 
@@ -49,6 +55,12 @@ AUTHORED = {
 async def main():
     http = httpx.AsyncClient(transport=httpx.ASGITransport(app=fixture_app), base_url="http://fx")
     cache = {}
+    live = None
+    if "--live" in sys.argv:
+        load_dotenv()
+        if not resolve_key(os.environ.get("ANALYZER_PROVIDER")):
+            sys.exit("--live needs ANALYZER_API_KEY (see .env.example)")
+        live = LiveAnalyzer(httpx.AsyncClient(timeout=60))
     for name, sid in SCENARIOS.items():
         for state in (["benign", "icon", "modified"] if name == "rugpull" else [None]):
             if state:
@@ -56,11 +68,22 @@ async def main():
             tools, ins = await McpClient(http, f"http://fx/s/{name}").capture()
             for t in tools:
                 key = (name, t["name"], state) if state else (name, t["name"])
-                fp = fingerprint(build_manifest(t, sid, ins))
-                cache[cache_key(fp)] = AUTHORED[key]
+                m = build_manifest(t, sid, ins)
+                fp = fingerprint(m)
+                if live and cache_key(fp) not in cache:
+                    try:  # the model sees the scanner findings, exactly as in the running product
+                        cache[cache_key(fp)] = LlmOutput(**await live._call_retry(build_user_message(m, scan(m)))).model_dump()
+                    except Exception as e:  # noqa: BLE001 - any failure must abort, never fall back to authored text
+                        sys.exit(f"live call failed for {name}/{t['name']}: {type(e).__name__}: {e}; nothing written")
+                    print(f"recorded {name}/{t['name']}{'/' + state if state else ''}: {cache[cache_key(fp)]['recommended_action']}")
+                elif not live:
+                    cache[cache_key(fp)] = AUTHORED[key]
     rug_pull_server.reset()
+    if live:
+        cache["_provenance"] = {"source": "live model", "provider": live.provider, "model": live.model,
+                                "prompt_version": PROMPT_VERSION, "recorded_at": datetime.date.today().isoformat()}
     CACHE_PATH.write_text(json.dumps(cache, indent=1), encoding="utf-8")
-    print(f"wrote {len(cache)} entries -> {CACHE_PATH}")
+    print(f"wrote {len(cache) - ('_provenance' in cache)} entries -> {CACHE_PATH}")
 
 
 asyncio.run(main())
