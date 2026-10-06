@@ -5,7 +5,7 @@ import { EscapedText } from '../components/HiddenCharMarker'
 import { FindingCard } from '../components/FindingCard'
 import { GatewaySession } from '../components/GatewaySession'
 
-const SCENARIOS: [string, string][] = [['benign', 'Benign'], ['poisoned', 'Poisoned'], ['invisible', 'Invisible-text'], ['rugpull', 'Rug pull'], ['shadow', 'Shadow'], ['results', 'Result injection']]
+const SCENARIOS: [string, string][] = [['benign', 'Benign'], ['poisoned', 'Poisoned'], ['invisible', 'Invisible-text'], ['rugpull', 'Rug pull'], ['shadow', 'Shadow'], ['results', 'Result injection'], ['cloak', 'Cloaking']]
 
 export function Demo({ tick, bump }: { tick: number; bump: () => void }) {
   const [tools, setTools] = useState<ToolTrustView[]>([])
