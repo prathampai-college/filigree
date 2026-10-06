@@ -7,8 +7,8 @@ every call. Design docs live in [`docs/`](docs/) (PRD, DESIGN, TECH-STACK, REFIN
 ## Run the demo (one command, fully offline)
 
 ```bash
-cd backend && uv sync && cd ../frontend && npm install && cd ..
-uv run --project backend python scripts/run_demo.py     # then open http://127.0.0.1:5173
+powershell -File scripts/demo.ps1     # Windows
+sh scripts/demo.sh                     # macOS / Linux; then open http://127.0.0.1:5173
 ```
 
 Starts fixture MCP servers (:9000, mock exfil sink included), the backend (:8000, `FILIGREE_DEMO=1`) and the UI (:5173).
@@ -71,7 +71,7 @@ Remaining known misses: paraphrases without a known path or verb ("private confi
 `capture` (raw JSON-RPC over HTTP, no SDK normalization) → `manifest` (canonical JSON, strings verbatim, SHA-256 over server id +
 server instructions + tool definition) → `scanner` (deterministic, cannot be downgraded) → `analyzer` (advisory, tool text framed as
 untrusted data, schema-validated, failure = REVIEW) → `policy` → human approval → `gate` (re-fetches `tools/list` and re-hashes
-before **every** `tools/call`; any capture/DB failure blocks). Audit events form a hash chain. The reference agent registry is
+before **every** `tools/call`; any capture/DB failure blocks). Audit events form a hash chain: the Audit page can verify it, export it as JSON, and (in demo mode) tamper with one row to show the break and which event it is. The reference agent registry is
 built only from the canonical manifest of currently-valid approvals.
 
 ## Not protected (state this plainly)
