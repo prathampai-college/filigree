@@ -278,3 +278,15 @@ async def test_cloaking_detected_and_blocked(api, ctx):  # fixture J: clean to F
     exfil.reset()
     safe = (await api.post("/api/demo/attack", json={"server_id": sid, "tool": "search_documents", "protected": True})).json()
     assert not safe["succeeded"] and exfil.LOG == []
+
+
+async def test_lockfile_verifies_then_catches_rug_pull(api, ctx):
+    from app import lock
+    sid = await connect(api, "rugpull")
+    await api.post(f"/api/tools/{sid}:fetch_report/approve")
+    pinned = (await api.get("/api/lock")).json()
+    assert list(pinned["tools"]) == [f"{sid}:fetch_report"]
+    assert await lock.verify(pinned, ctx.http) == []
+    await api.post("/api/demo/mutate", json={"mode": "modified"})
+    problems = await lock.verify(pinned, ctx.http)
+    assert len(problems) == 1 and "MANIFEST_DRIFT in tool.description" in problems[0]
