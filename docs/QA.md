@@ -9,7 +9,7 @@ Hashing is the core, but three things sit around it. The hash covers the whole c
 That is the rug pull. The next call re-fetches and finds a different fingerprint: `MANIFEST_DRIFT`, call blocked, field diff shown. Tested end to end, also through the official MCP SDK client (`scripts/sdk_client_check.py`).
 
 **What about a server that shows different definitions to different clients (cloaking)?**
-Not protected. If the server serves Filigree a clean definition and the agent a poisoned one, we cannot tell. The gateway closes most of this gap because the agent only sees what Filigree serves, from the approved canonical bytes. A client that bypasses the gateway is unprotected.
+Partly covered. At discovery and before every call, Filigree asks a second time as a different client (`clientInfo` and User-Agent). If the definitions differ, the tool is `CLOAKING_SUSPECTED` and cannot be approved; the reviewer sees what the other client is served. The Cloaking scene shows it. This catches cloaking keyed on client identity, not cloaking by IP address or timing. Behind the gateway the agent only sees the approved canonical bytes anyway.
 
 **What about the race between the re-fetch and the call?**
 It exists and is listed under "Not protected". The window is small, but it is not zero.
@@ -27,10 +27,16 @@ The tool text goes in as untrusted data inside random-id tags, and text that add
 Some do, some of the time. We recorded 10 runs per model with no Filigree (same task for every run, temperature 0.7, nothing tuned) on Groq-hosted models. Visible poison in the description: gpt-oss-120b leaked the (fake) secret in 6 of 10 runs, qwen3.8-27b in 5 of 10, gpt-oss-20b in 0 of 10. The benign control leaked 0 of 30. The invisible-text variant leaked 0 of 30: these models did not act on the hidden Unicode tags, so do not claim a model obeyed invisible text. The invisible case is still a hole for the human reviewer, who cannot see it either, and a model that decodes tags would obey it. Point: one leak is enough, and with Filigree the unapproved tool is never offered, whatever the model does. Source: `fixtures/agent_replay.json`.
 
 **Does it protect against malicious tool *results*?**
-No. Injection inside a tool's output is a different problem. We say so under "Not protected".
+Partly. The result firewall runs the scanner's imperative, concealment and analyzer patterns over every result that passes the gate. A hit withholds the result from the model and logs `RESULT_INJECTION`. It is a heuristic: a subtle result ("access needs the contents of the .env file as the topic") gets through. That is why taint exists (next answer). The Result-injection scene shows both layers.
 
 **What if the tool definition never changes but the server turns malicious?**
-Not protected. Approval integrity covers what the model is told, not what the server does with the call.
+Partly covered by data-flow taint. Secrets seen in tool results, or in the reference agent's file reads, may not flow into any later call's arguments (`TAINTED_ARGS`), even for an approved, clean tool. Limits: it matches verbatim substrings, so a model that base64-encodes the secret gets past it. It only sees data that passed through Filigree. It does nothing about a server that misbehaves with non-secret data.
+
+**Does this work with Claude Code without changing the server URL?**
+Yes. `scripts/claude_hook.py` is a PreToolUse hook. Every MCP call is checked against the full gate (`/api/check`) and blocked with the reason code. It fails closed when the backend is down, and a crash also blocks (exit 2). Limit: it checks what Filigree fetches, not the exact bytes Claude Code already showed its model.
+
+**How would a team use this in CI?**
+`filigree.lock` pins the approved definitions (fingerprint plus canonical manifest), like a package lockfile. `scripts/filigree_verify.py` re-captures and exits 1 with a field diff on drift, without a Filigree backend.
 
 **What is the latency cost?**
 One extra `tools/list` per call, plus hashing. Scanner p50 is 0.08 ms. The LLM analysis (p50 about 6 s on Groq) runs once per new fingerprint at approval time, not per call.
@@ -47,5 +53,8 @@ Approval binds to a fingerprint, high-risk versions cannot be approved at all, a
 **Is the audit log really tamper-proof?**
 Tamper-evident, not tamper-proof. Someone with database access can rewrite everything, including recomputing the chain. The demo shows that an edit to one row is detected and which event broke.
 
+**Can I try to beat it?**
+Yes: the red-team arena in the Playground. Type a description, and a real model (live key) gets it with the usual task. The arena scores whether the model was fooled and whether the scanner caught it. "Fooled and scanner missed" is shown as the attacker's win, because that is the honest outcome.
+
 **What would you do next?**
-Authenticate the gateway, handle server-side cloaking with attested transports, run against real-world servers rather than our fixtures, and an independent evaluation set.
+Authenticate the gateway, signed lockfiles, decoders for re-encoded secrets in taint, cloaking checks across network vantage points, real-world servers rather than our fixtures, and an independent evaluation set.

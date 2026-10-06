@@ -22,6 +22,59 @@ The Playground lets a judge add a zero-width character to an approved descriptio
 The agent scenes have an **Agent** selector: *Scripted agent* (deterministic stand-in) or *Real model*. Real model hands a tool-calling LLM the tools and a harmless task ("find the Q3 planning notes") plus a simulated `read_file`; unprotected it sees the raw tools, with Filigree it only sees tools with a valid approval. Runs recorded in `fixtures/agent_replay.json` (with k/N counts per model) are replayed offline; with `ANALYZER=live` and a key it runs the model now. Re-record with `uv run --project backend python scripts/record_agent.py 10 <model> ...`.
 The Demo page also has **Run gateway session**: a full MCP session over `/mcp/srv-rugpull` as raw JSON-RPC (list, human approval, call, rug pull, blocked call), the same messages a real client sends.
 
+## Beyond approval: what flows through an approved tool
+
+Approval decides *which* tools the model gets. Three runtime checks cover what approval cannot see:
+
+- **Data-flow taint** (`TAINTED_ARGS`): a secret that came back from a tool, or from the reference agent's file read, may not
+  flow into a later call's arguments. This holds even for an approved tool with a clean definition. The match is a
+  verbatim substring, so a secret the model re-encodes (base64, split) gets through. `backend/app/gate/runtime.py`.
+- **Result firewall** (`RESULT_INJECTION`): a tool *result* carrying model-directed instructions is withheld from the
+  model and audited. It is a heuristic on the scanner's imperative, concealment and analyzer patterns. File paths alone
+  are not flagged.
+- **Cloaking probe** (`CLOAKING_SUSPECTED`): at discovery and before every call, Filigree asks again as a different client.
+  A definition that changes with who is asking cannot be approved. It catches cheap cloaking keyed on client identity, not
+  a server that cloaks by IP or timing.
+
+Demo scenes: *Result injection* (`find_files` is caught by the firewall; `fetch_notes` is subtle, passes the firewall, and
+taint stops the exfil call) and *Cloaking*.
+
+## Pin it: `filigree.lock`
+
+**Download filigree.lock** (Audit page, or `GET /api/lock`) pins every approved tool: its endpoint, fingerprint and
+canonical manifest, like a package lockfile. Commit it. Then CI can check that the servers still serve exactly the
+approved definitions, without a Filigree backend:
+
+```bash
+uv run --project backend python scripts/filigree_verify.py filigree.lock   # exit 1 + field diff on drift
+```
+
+```yaml
+# .github/workflows/mcp-lock.yml
+- run: uv run --project backend python scripts/filigree_verify.py filigree.lock
+```
+
+## Claude Code hook: no gateway URL swap needed
+
+`scripts/claude_hook.py` is a PreToolUse hook. Every `mcp__*` call is checked by Filigree (`/api/check`, the full gate
+without the call) and blocked with the reason code if the tool is unapproved, drifted, cloaked or carrying tainted args.
+It fails closed if the backend is down. The Claude Code server name must equal the Filigree server id (or set
+`FILIGREE_MAP="name=srv-id"`). In `.claude/settings.json` (use an absolute script path from other projects):
+
+```json
+{ "hooks": { "PreToolUse": [ { "matcher": "mcp__.*",
+  "hooks": [ { "type": "command", "command": "python scripts/claude_hook.py" } ] } ] } }
+```
+
+Limit: the hook checks the definition Filigree fetches. The text Claude Code already showed its model is not visible
+to it; the cloaking probe narrows that gap.
+
+## Red-team arena
+
+In the Playground, **Red-team arena: try it on a real model** hands your description to a tool-calling model (needs an
+OpenAI-compatible key in `.env`; one live call per attempt) and scores it: model fooled or not, scanner caught it or not.
+"Model fooled and scanner missed" is shown as a win for the attacker. Attempts are audited (`ARENA_ATTEMPT`).
+
 ## Use it as a real MCP gateway
 
 Each connected server is also exposed at `http://127.0.0.1:8000/mcp/<server_id>` (JSON-RPC over HTTP). `tools/list` returns only
@@ -44,7 +97,7 @@ stdio-only clients (Claude Desktop) use the stdlib bridge `scripts/stdio_bridge.
 ## Tests and evaluation
 
 ```bash
-cd backend && uv run pytest                                   # 52 tests: manifest, scanner, policy, gate, rug pull, failure drills, real-model agent
+cd backend && uv run pytest                                   # 58 tests: manifest, scanner, policy, gate, rug pull, failure drills, real-model agent, taint, result firewall, cloaking, lock, hook check, arena
 python fixtures/evaluation/build_sets.py                      # (re)generate frozen sets; do not tune after freezing
 uv run --project backend python scripts/evaluate.py           # writes fixtures/evaluation/results.json
 ```
@@ -78,6 +131,7 @@ built only from the canonical manifest of currently-valid approvals.
 
 ## Not protected (state this plainly)
 
-Malicious server behavior with an unchanged definition · instructions inside tool *results* · clients that bypass the gate · a
-server that cloaks (serves different definitions to different clients) · the race between the gate's re-fetch and the call ·
-subtle semantic injections the scanner misses and the analyzer also misses.
+Malicious server behavior with an unchanged definition (partially: taint blocks known secrets flowing into it) · instructions
+inside tool *results* (partially: heuristic result firewall) · secrets the model re-encodes before sending · clients that
+bypass both the gateway and the hook · a server that cloaks by IP or timing rather than client identity · the race between
+the gate's re-fetch and the call · subtle semantic injections the scanner misses and the analyzer also misses.
