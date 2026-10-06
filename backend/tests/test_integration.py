@@ -265,3 +265,16 @@ async def test_taint_blocks_secret_in_args_via_gateway(api, ctx):
     bad = await gate_call(ctx, sid, "search_documents", {"query": "x hunter2hunter2"})
     assert ok["allowed"] and not bad["allowed"] and bad["reason_codes"] == ["TAINTED_ARGS"]
     assert runtime.result_injection("Notes for Q3. Budget is fine.") == []
+
+
+async def test_cloaking_detected_and_blocked(api, ctx):  # fixture J: clean to Filigree, poisoned to everyone else
+    sid = await connect(api, "cloak")
+    v = (await api.get(f"/api/tools/{sid}:search_documents/view")).json()
+    assert v["trust_state"] == "BLOCKED" and v["eligibility"]["reason_codes"] == ["CLOAKING_SUSPECTED"]
+    assert "IMPORTANT" in next(f["evidence"] for f in v["analysis"]["findings"] if f["category"] == "cloaking")
+    assert (await api.post(f"/api/tools/{sid}:search_documents/approve", json={"confirm": True})).status_code == 409
+    bad = (await api.post("/api/demo/attack", json={"server_id": sid, "tool": "search_documents", "protected": False})).json()
+    assert bad["succeeded"]  # the agent, a different client, got the poisoned text
+    exfil.reset()
+    safe = (await api.post("/api/demo/attack", json={"server_id": sid, "tool": "search_documents", "protected": True})).json()
+    assert not safe["succeeded"] and exfil.LOG == []
