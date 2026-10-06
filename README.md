@@ -12,7 +12,7 @@ sh scripts/demo.sh                     # macOS / Linux; then open http://127.0.0
 ```
 
 Starts fixture MCP servers (:9000, mock exfil sink included), the backend (:8000, `FILIGREE_DEMO=1`) and the UI (:5173).
-Analysis runs in **REPLAY MODE** (authored cache in `fixtures/replay_cache.json`, regenerate with `scripts/seed_fixtures.py`).
+Analysis runs in **REPLAY MODE** so the demo works offline. `fixtures/replay_cache.json` holds **real model output recorded on 2026-10-06** (Groq `openai/gpt-oss-120b`, one call per demo tool; the nav badge names the source). Re-record with `uv run --project backend python scripts/seed_fixtures.py --live` (needs a key in `.env`); without `--live` the script writes authored text and the badge says so. `run_demo.py` never overwrites an existing cache.
 Live analysis works with Anthropic, Groq or Gemini (also any OpenAI-compatible API): put one key in `.env` (gitignored; see `.env.example`), the provider is auto-detected from the key prefix, or set `ANALYZER_PROVIDER` / `ANALYZER_MODEL`. `ANALYZER=live` switches the demo to it.
 
 Demo script (Demo page): connect *Invisible-text* → **Run WITHOUT Filigree** (ATTACK SUCCEEDED) → **Run WITH Filigree**
