@@ -1,5 +1,6 @@
 """FastAPI surface. REST for inspectability. Demo/playground endpoints exist only when FILIGREE_DEMO=1 (D-23)."""
 import json
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -49,7 +50,7 @@ class PlaygroundBody(BaseModel):
 def create_app(ctx: svc.Ctx) -> FastAPI:
     app = FastAPI(title="Filigree")
     app.state.ctx = ctx
-    app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("FILIGREE_CORS", "http://localhost:5173,http://127.0.0.1:5173").split(","),
                        allow_methods=["*"], allow_headers=["*"])
 
     def need_view(tid: str) -> ToolTrustView:
