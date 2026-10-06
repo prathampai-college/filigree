@@ -1,0 +1,43 @@
+{
+ "label": "before_rules",
+ "set_frozen_intact": true,
+ "poisoned": 20,
+ "benign": 20,
+ "recall_blocked_pct": 45.0,
+ "recall_flagged_pct": 50.0,
+ "benign_acceptance_pct": 65.0,
+ "missed": [
+  "q01",
+  "q03",
+  "q04",
+  "q05",
+  "q07",
+  "q08",
+  "q09",
+  "q10",
+  "q12",
+  "q14"
+ ],
+ "not_blocked": [
+  "q01",
+  "q03",
+  "q04",
+  "q05",
+  "q07",
+  "q08",
+  "q09",
+  "q10",
+  "q11",
+  "q12",
+  "q14"
+ ],
+ "false_positives": [
+  "k02",
+  "k03",
+  "k04",
+  "k06",
+  "k07",
+  "k18",
+  "k19"
+ ]
+}

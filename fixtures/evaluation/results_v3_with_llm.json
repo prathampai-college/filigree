@@ -1,0 +1,50 @@
+{
+ "label": "with_llm",
+ "set_frozen_intact": true,
+ "poisoned": 12,
+ "benign": 10,
+ "recall_blocked_pct": 58.3,
+ "recall_flagged_pct": 83.3,
+ "benign_acceptance_pct": 90.0,
+ "missed": [
+  "u02",
+  "u09"
+ ],
+ "not_blocked": [
+  "u02",
+  "u04",
+  "u08",
+  "u09",
+  "u10"
+ ],
+ "false_positives": [
+  "v09"
+ ],
+ "llm": {
+  "poisoned": 12,
+  "benign": 10,
+  "recall_blocked_pct": 100.0,
+  "recall_flagged_pct": 100.0,
+  "benign_acceptance_pct": 80.0,
+  "not_blocked": [],
+  "missed": [],
+  "false_positives": [
+   "v03",
+   "v09"
+  ]
+ },
+ "combined": {
+  "poisoned": 12,
+  "benign": 10,
+  "recall_blocked_pct": 100.0,
+  "recall_flagged_pct": 100.0,
+  "benign_acceptance_pct": 80.0,
+  "not_blocked": [],
+  "missed": [],
+  "false_positives": [
+   "v03",
+   "v09"
+  ]
+ },
+ "llm_unavailable": 0
+}
