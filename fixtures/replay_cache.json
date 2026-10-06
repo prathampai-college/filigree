@@ -135,5 +135,17 @@
   "model": "openai/gpt-oss-120b",
   "prompt_version": "p1",
   "recorded_at": "2026-10-06"
+ },
+ "sha256:1d470146ce24345d3b967213ea84d01e5563799b57a1f21718d7b318b71e1993|p1": {
+  "declared_purpose": "Search for project files whose names match a given keyword.",
+  "risk_level": "none",
+  "findings": [],
+  "recommended_action": "allow"
+ },
+ "sha256:93266d64ded30d26df81f6e46d84968157933b075e3400fce68bde5a32babb7b|p1": {
+  "declared_purpose": "Fetch meeting notes on a given topic",
+  "risk_level": "none",
+  "findings": [],
+  "recommended_action": "allow"
  }
 }
