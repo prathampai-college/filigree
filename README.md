@@ -118,6 +118,8 @@ samples. Rug-pull drift detection is 100% (5/5) with 0/15 false drift; scanner l
 `fixtures/evaluation/results*.json` (`results_v1_pretuning.json` keeps the original numbers). The 12 "public" samples are
 **illustrative**: modeled on published attack classes, not quoted from them (checked 2026-10-06, see `fixtures/evaluation/SOURCES.md`; one cited link is dead).
 
+Real-world check: the scanner was run on 52 tool definitions from 7 official MCP servers ([`docs/REAL-WORLD-SCAN.md`](docs/REAL-WORLD-SCAN.md)). None are poisoned; the scanner raised one **blocking false positive** ("succeed silently" in `create_directory`) and 14 review-level ones, and the scan exposed a real `$schema` bug that is now fixed (0 changes on the 109 frozen samples).
+
 Remaining known misses: paraphrases without a known path or verb ("private configuration directory"), cross-field references,
 "keychain"-style paths on other OSes, non-English concealment. Those are for the advisory LLM stage and human review.
 
