@@ -13,6 +13,7 @@ jobs:
       - run: uv sync --project backend
       - run: uv run --project backend pytest -q
         working-directory: backend
+      - run: uv run --project backend --with "mcp>=2" python scripts/sdk_client_check.py
 
   frontend:
     runs-on: ubuntu-latest
