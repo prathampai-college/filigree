@@ -130,6 +130,21 @@ async def test_audit_chain_detects_tampering(api, ctx):
     assert not chain.verify(ctx.store)
 
 
+async def test_audit_tamper_demo_export_and_restore(api, ctx):
+    sid = await connect(api, "benign")
+    await api.post(f"/api/tools/{sid}:search_documents/approve")
+    assert (await api.get("/api/audit")).json()["broken_at"] is None
+    tid = (await api.post("/api/demo/tamper")).json()["tampered_id"]
+    a = (await api.get("/api/audit")).json()
+    assert not a["chain_verified"] and a["broken_at"] == tid
+    assert (await api.post("/api/demo/tamper")).status_code == 409  # one remembered edit at a time
+    ex = await api.get("/api/audit/export")
+    assert "attachment" in ex.headers["content-disposition"]
+    assert ex.json()["broken_at"] == tid and ex.json()["events"][0]["id"] < ex.json()["events"][-1]["id"]
+    await api.post("/api/demo/untamper")
+    assert (await api.get("/api/audit")).json()["chain_verified"]
+
+
 async def test_denied_fingerprint_stays_blocked(api):
     sid = await connect(api, "benign")
     assert (await api.post(f"/api/tools/{sid}:search_documents/deny")).json()["trust_state"] == "BLOCKED"

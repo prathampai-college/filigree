@@ -31,11 +31,22 @@ def events(store: Store, limit: int = 200) -> list[dict]:
     return [{**dict(r), "changed_fields": json.loads(r["changed_fields"])} for r in rows]
 
 
-def verify(store: Store) -> bool:
+def first_broken(store: Store) -> int | None:
+    """Id of the first event whose stored hash does not match its content or its predecessor, else None."""
     prev = GENESIS
     for r in store.q("SELECT * FROM audit ORDER BY id"):
         ev = {k: r[k] for k in FIELDS}
         if r["prev_event_hash"] != prev or r["hash"] != _hash(prev, ev):
-            return False
+            return r["id"]
         prev = r["hash"]
-    return True
+    return None
+
+
+def verify(store: Store) -> bool:
+    return first_broken(store) is None
+
+
+def export(store: Store) -> list[dict]:
+    """Every event oldest-first, with hashes, so an auditor can re-verify offline."""
+    rows = store.q("SELECT * FROM audit ORDER BY id")
+    return [{**dict(r), "changed_fields": json.loads(r["changed_fields"])} for r in rows]

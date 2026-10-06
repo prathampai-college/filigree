@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from .. import service as svc
@@ -134,7 +135,14 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
 
     @app.get("/api/audit")
     def audit(limit: int = 200):
-        return {"events": chain.events(ctx.store, limit), "chain_verified": chain.verify(ctx.store)}
+        broken = chain.first_broken(ctx.store)
+        return {"events": chain.events(ctx.store, limit), "chain_verified": broken is None, "broken_at": broken}
+
+    @app.get("/api/audit/export")
+    def audit_export():
+        broken = chain.first_broken(ctx.store)
+        return JSONResponse({"chain_verified": broken is None, "broken_at": broken, "events": chain.export(ctx.store)},
+                            headers={"Content-Disposition": 'attachment; filename="filigree-audit.json"'})
 
     @app.get("/api/metrics")
     def metrics():
@@ -189,6 +197,30 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
         mode_ = (body or {}).get("mode", "modified")
         await ctx.http.post(f"{ctx.fixture_base}/control/rug_pull/{mode_}", timeout=5)
         return {"mode": mode_}
+
+    tampered: dict = {}  # ponytail: single remembered edit; one tamper at a time is all the demo needs
+
+    @app.post("/api/demo/tamper")
+    def tamper():
+        """Rewrite history in the audit table directly, bypassing the app, so the broken chain can be shown live."""
+        demo_only()
+        if tampered:
+            raise HTTPException(409, "already tampered")
+        rows = ctx.store.q("SELECT id, reason FROM audit WHERE event_type='APPROVED' ORDER BY id DESC LIMIT 1") \
+            or ctx.store.q("SELECT id, reason FROM audit ORDER BY id DESC LIMIT 1")
+        if not rows:
+            raise HTTPException(409, "no audit events to tamper with")
+        tampered.update(id=rows[0]["id"], reason=rows[0]["reason"])
+        ctx.store.x("UPDATE audit SET reason=? WHERE id=?", (tampered["reason"] or "") + " [edited]", tampered["id"])
+        return {"tampered_id": tampered["id"]}
+
+    @app.post("/api/demo/untamper")
+    def untamper():
+        demo_only()
+        if tampered:
+            ctx.store.x("UPDATE audit SET reason=? WHERE id=?", tampered["reason"], tampered["id"])
+            tampered.clear()
+        return {"ok": True}
 
     @app.post("/api/demo/attack")
     async def attack(b: AttackBody):
