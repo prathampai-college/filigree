@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from .. import lock
 from .. import service as svc
 from ..agent import llm_agent, scripted
 from ..analyzer.impl import CACHE_PATH
@@ -152,6 +153,10 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
         broken = chain.first_broken(ctx.store)
         return JSONResponse({"chain_verified": broken is None, "broken_at": broken, "events": chain.export(ctx.store)},
                             headers={"Content-Disposition": 'attachment; filename="filigree-audit.json"'})
+
+    @app.get("/api/lock")
+    def lockfile():
+        return JSONResponse(lock.export(ctx), headers={"Content-Disposition": 'attachment; filename="filigree.lock"'})
 
     @app.get("/api/metrics")
     def metrics():
