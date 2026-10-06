@@ -3,6 +3,7 @@ import { api, short, type AttackResult, type Playground } from '../api'
 import type { ToolTrustView } from '../types'
 import { EscapedText } from '../components/HiddenCharMarker'
 import { FindingCard } from '../components/FindingCard'
+import { GatewaySession } from '../components/GatewaySession'
 
 const SCENARIOS: [string, string][] = [['benign', 'Benign'], ['poisoned', 'Poisoned'], ['invisible', 'Invisible-text'], ['rugpull', 'Rug pull'], ['shadow', 'Shadow']]
 
@@ -60,6 +61,8 @@ export function Demo({ tick, bump }: { tick: number; bump: () => void }) {
           </div>
         )}
       </section>
+
+      <GatewaySession onDone={bump} />
 
       <PlaygroundPanel />
     </div>
