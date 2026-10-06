@@ -33,7 +33,7 @@ export default function App() {
       <main className="mx-auto max-w-6xl p-6">
         {page === 'Tools' && <Tools tick={tick} bump={bump} />}
         {page === 'Demo' && <Demo tick={tick} bump={bump} />}
-        {page === 'Audit' && <AuditTimeline tick={tick} limit={25} />}
+        {page === 'Audit' && <AuditTimeline tick={tick} limit={25} controls />}
         {page === 'Evaluation' && <Evaluation tick={tick} />}
       </main>
     </div>

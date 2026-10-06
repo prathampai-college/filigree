@@ -27,7 +27,9 @@ export const api = {
   manifest: (id: string) => j<{ fingerprint: string; manifest: unknown }>(`/api/tools/${enc(id)}/manifest`),
   approve: (id: string, confirm = false) => post<ToolTrustView>(`/api/tools/${enc(id)}/approve`, { confirm }),
   deny: (id: string) => post<ToolTrustView>(`/api/tools/${enc(id)}/deny`),
-  audit: () => j<{ events: AuditEvent[]; chain_verified: boolean }>('/api/audit'),
+  audit: () => j<{ events: AuditEvent[]; chain_verified: boolean; broken_at: number | null }>('/api/audit'),
+  tamper: () => post<{ tampered_id: number }>('/api/demo/tamper'),
+  untamper: () => post('/api/demo/untamper'),
   metrics: () => j<Record<string, any>>('/api/metrics'),
   call: (server_id: string, tool: string, args: object = {}) =>
     post<{ allowed: boolean; reason_codes: string[]; changed_fields: string[]; result: string | null }>('/api/agent/call', { server_id, tool, args }),
@@ -42,3 +44,7 @@ export const api = {
 }
 
 export const short = (h?: string | null) => (h ? `${h.slice(0, 15)}…${h.slice(-4)}` : '—')
+
+// Scanner evidence reads "<field>: <label>: <matched text>"; the matched tail is what we look for in the model-visible text.
+export const needlesFrom = (evidence: string[]) =>
+  evidence.map((e) => (e.split(': ').pop() ?? '').replace(/^(references|destination) /, '').replace(/^"|"$/g, '')).filter((n) => n.length >= 4)
