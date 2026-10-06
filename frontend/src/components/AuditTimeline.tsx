@@ -23,6 +23,7 @@ export function AuditTimeline({ tick, tool, limit = 10, controls = false }: { ti
           <>
             <button className="rounded border border-zinc-600 px-2 py-0.5 text-xs hover:border-zinc-300" onClick={() => setN((x) => x + 1)}>Verify chain</button>
             <a className="rounded border border-zinc-600 px-2 py-0.5 text-xs hover:border-zinc-300" href="/api/audit/export" download>Export JSON</a>
+            <a className="rounded border border-zinc-600 px-2 py-0.5 text-xs hover:border-zinc-300" href="/api/lock" download title="Approved tool definitions, pinned; check them in CI with scripts/filigree_verify.py">Download filigree.lock</a>
             {demo && (data.chain_verified
               ? <button className="rounded border border-red-500 px-2 py-0.5 text-xs text-red-300 hover:bg-red-950" onClick={() => run(api.tamper())}>Tamper with an event (demo)</button>
               : <button className="rounded border border-emerald-500 px-2 py-0.5 text-xs text-emerald-300 hover:bg-emerald-950" onClick={() => run(api.untamper())}>Restore (demo)</button>)}
