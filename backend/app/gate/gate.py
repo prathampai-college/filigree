@@ -19,6 +19,7 @@ async def gate_call(ctx: svc.Ctx, sid: str, tool_name: str, args: dict) -> dict:
         if srv is None:
             raise CaptureError("unknown server")
         tools, instructions = await ctx.client(srv["endpoint"]).capture()  # re-fetch NOW
+        await svc.probe_cloaking(ctx, sid, srv["endpoint"], tools, instructions)
         live = next((t for t in tools if t.get("name") == tool_name), None)
         if live is None:
             raise CaptureError("tool no longer offered")

@@ -30,8 +30,8 @@ class Ctx:
     demo: bool = False
     extra: dict = field(default_factory=dict)
 
-    def client(self, endpoint: str) -> McpClient:
-        return McpClient(self.http, endpoint)
+    def client(self, endpoint: str, identity: str = "filigree") -> McpClient:
+        return McpClient(self.http, endpoint, identity)
 
     @classmethod
     def from_env(cls) -> "Ctx":
@@ -52,10 +52,27 @@ def split_id(tid: str) -> tuple[str, str]:
     return sid, name
 
 
+PROBE_IDENTITY = "claude-code"  # ponytail: one alternate identity; a server that cloaks on IP or timing still passes
+
+
 def scan_for(ctx: Ctx, manifest: dict) -> list[Finding]:
-    sid = manifest["server"]["id"]
     known = {r["tool_name"] for r in ctx.store.tools()}
-    return scan(manifest, approved=ctx.store.approved_pairs(), known_tools=known)
+    out = scan(manifest, approved=ctx.store.approved_pairs(), known_tools=known)
+    if ev := ctx.extra.get("cloaked", {}).get(fingerprint(manifest)):
+        out.append(Finding(source="scanner", category="cloaking", severity="high", evidence=ev[:200], confidence="high"))
+    return out
+
+
+async def probe_cloaking(ctx: Ctx, sid: str, endpoint: str, tools: list[dict], instructions: str | None) -> None:
+    """Ask again as a different client. A definition that differs by who is asking is marked cloaked (blocked)."""
+    other, other_ins = await ctx.client(endpoint, PROBE_IDENTITY).capture()
+    theirs = {t.get("name"): build_manifest(t, sid, other_ins) for t in other}
+    for t in tools:
+        m = build_manifest(t, sid, instructions)
+        om = theirs.get(t.get("name"))
+        if om is None or fingerprint(om) != fingerprint(m):
+            seen = escape_for_display(om["tool"].get("description", "")) if om else "(tool not offered)"
+            ctx.extra.setdefault("cloaked", {})[fingerprint(m)] = f"client '{PROBE_IDENTITY}' is served a different definition: {seen}"
 
 
 async def analyze(ctx: Ctx, manifest: dict, fp: str, force: bool = False) -> None:
@@ -89,6 +106,7 @@ def record_capture(ctx: Ctx, sid: str, tool: dict, instructions: str | None) -> 
 async def discover(ctx: Ctx, sid: str) -> list[str]:
     srv = ctx.store.server(sid)
     tools, instructions = await ctx.client(srv["endpoint"]).capture()
+    await probe_cloaking(ctx, sid, srv["endpoint"], tools, instructions)
     names = []
     for t in tools:
         m, fp = record_capture(ctx, sid, t, instructions)

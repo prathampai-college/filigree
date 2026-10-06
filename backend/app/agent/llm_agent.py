@@ -80,7 +80,7 @@ async def run_live(ctx: svc.Ctx, sid: str, tool_name: str, protected: bool, chat
     agent = LiveAnalyzer(model_http or ctx.http)
     if agent.provider == "anthropic" or not agent.api_key:
         return {"succeeded": False, "agent": "llm", "log": ["Real-model agent needs an OpenAI-compatible key (Groq, Gemini, OpenAI)."]}
-    client = ctx.client(ctx.store.server(sid)["endpoint"])
+    client = ctx.client(ctx.store.server(sid)["endpoint"], "agent")
     if protected:
         tools = [{k: v for k, v in t.items() if k != "server_id"} for t in registry(ctx) if t["server_id"] == sid]
     else:

@@ -23,7 +23,7 @@ from ..policy.evaluate import eligibility, risk_of
 from .schemas import ToolTrustView
 
 SCENARIOS = {"benign": "srv-benign", "poisoned": "srv-poisoned", "invisible": "srv-invisible",
-             "rugpull": "srv-rugpull", "shadow": "srv-shadow", "results": "srv-results"}
+             "rugpull": "srv-rugpull", "shadow": "srv-shadow", "results": "srv-results", "cloak": "srv-cloak"}
 EVAL_RESULTS = Path(__file__).resolve().parents[3] / "fixtures" / "evaluation" / "results.json"
 
 

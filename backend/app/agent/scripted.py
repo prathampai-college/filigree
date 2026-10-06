@@ -39,7 +39,7 @@ async def exfil_log(ctx: svc.Ctx) -> list[dict]:
 async def run_attack(ctx: svc.Ctx, sid: str, tool_name: str, protected: bool) -> dict:
     log = [LABEL]
     srv = ctx.store.server(sid)
-    client = ctx.client(srv["endpoint"])
+    client = ctx.client(srv["endpoint"], "agent")  # the agent is its own client, not Filigree
     tools, _ = await client.capture()
     tool = next(t for t in tools if t["name"] == tool_name)
     before = len(await exfil_log(ctx))

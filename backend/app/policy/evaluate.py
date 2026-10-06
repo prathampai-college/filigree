@@ -13,11 +13,15 @@ def risk_of(findings: list[Finding]) -> str:
     return max((f.severity for f in findings), key=_RANK.get, default="none")
 
 
+def _deny(findings: list[Finding]) -> list[str]:
+    return ["CLOAKING_SUSPECTED"] if any(f.category == "cloaking" for f in findings) else ["POLICY_DENY"]
+
+
 def eligibility(findings: list[Finding], analysis_ok: bool) -> Decision:
     """Approval time: may this manifest be presented for approval? allow = eligible, never auto-approve."""
     r = _RANK.get(risk_of(findings), 0)
     if r >= 3:
-        return Decision(action="block", reason_codes=["POLICY_DENY"])
+        return Decision(action="block", reason_codes=_deny(findings))
     codes = (["MEDIUM_FINDING"] if r == 2 else []) + ([] if analysis_ok else ["ANALYSIS_UNAVAILABLE"])
     return Decision(action="review" if codes else "allow", reason_codes=codes)
 
@@ -32,5 +36,5 @@ def gate_decision(current_fp: str | None, approved_fp: str | None, findings: lis
     if current_fp != approved_fp:
         return Decision(action="block", reason_codes=["MANIFEST_DRIFT"]), Drift(detected=True, changed_fields=list(changed))
     if _RANK.get(risk_of(findings), 0) >= 3:
-        return Decision(action="block", reason_codes=["POLICY_DENY"]), Drift(detected=False)
+        return Decision(action="block", reason_codes=_deny(findings)), Drift(detected=False)
     return Decision(action="allow"), Drift(detected=False)

@@ -13,15 +13,15 @@ class CaptureError(Exception):
 
 
 class McpClient:
-    def __init__(self, http: httpx.AsyncClient, endpoint: str):
-        self.http, self.endpoint = http, endpoint
+    def __init__(self, http: httpx.AsyncClient, endpoint: str, identity: str = "filigree"):
+        self.http, self.endpoint, self.identity = http, endpoint, identity
 
     async def _rpc(self, method: str, params: dict | None = None, notify: bool = False):
         body = {"jsonrpc": "2.0", "method": method, **({"params": params} if params else {})}
         if not notify:
             body["id"] = next(_ids)
         try:
-            r = await self.http.post(self.endpoint, json=body, timeout=10)
+            r = await self.http.post(self.endpoint, json=body, timeout=10, headers={"User-Agent": f"{self.identity}/0"})
             r.raise_for_status()
             if notify:
                 return None
@@ -35,7 +35,7 @@ class McpClient:
     async def capture(self) -> tuple[list[dict], str | None]:
         """Returns (tools, server_instructions). Fresh initialize + tools/list every time."""
         init = await self._rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
-                                              "clientInfo": {"name": "filigree", "version": "0"}})
+                                              "clientInfo": {"name": self.identity, "version": "0"}})
         await self._rpc("notifications/initialized", notify=True)
         tools: list[dict] = []
         cursor = None
