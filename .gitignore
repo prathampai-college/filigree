@@ -1,6 +1,58 @@
-node_modules/
-.venv/
-__pycache__/
-*.db
-dist/
+# Secrets and local config (never commit)
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+
+# Local databases (demo and runtime state)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Node / frontend build output
+node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
+.vite/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Logs and scratch
+*.log
+logs/
+tmp/
+*.local
+
+# Editors and OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.suo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code local state (the shared launch.json stays tracked)
+.claude/*
+!.claude/launch.json
