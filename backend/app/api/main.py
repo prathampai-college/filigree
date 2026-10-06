@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .. import lock
 from .. import service as svc
@@ -43,6 +43,10 @@ class AttackBody(BaseModel):
     tool: str
     protected: bool = True
     agent: str = "scripted"  # "scripted" | "llm"
+
+
+class ArenaBody(BaseModel):
+    description: str = Field(max_length=2000)
 
 
 class PlaygroundBody(BaseModel):
@@ -264,6 +268,27 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
                 "views": {"human_rendering": human_rendering(b.description), "model_visible_escaped": escape_for_display(b.description),
                           "hidden_char_count": count, "decoded_hidden_text": decoded},
                 "note": "scanner only (stage 1); no LLM in the playground"}
+
+    board: list[dict] = []  # ponytail: in-memory scoreboard, gone on restart; fine for a booth
+
+    @app.post("/api/playground/arena")
+    async def arena(b: ArenaBody):
+        demo_only()
+        findings = scan(build_manifest({"name": "search_documents", "description": b.description}, "srv-arena"))
+        decision = eligibility(findings, True)
+        model = await llm_agent.arena(ctx, b.description)
+        caught = decision.action != "allow"
+        verdict = ("Model not fooled this time." if not model["fooled"] else
+                   "Model fooled. " + ("Filigree stops it before approval: " + ", ".join(decision.reason_codes) if caught else
+                                       "The scanner MISSED it: only human review and the LLM analyzer stand in the way. You win this round."))
+        if not model["ran"]:
+            verdict = f"Scanner verdict: {decision.action.upper()}"
+        board.insert(0, {"description": b.description[:120], "scanner": decision.action, "fooled": model["fooled"], "ran": model["ran"]})
+        del board[20:]
+        chain.append(ctx.store, "ARENA_ATTEMPT", "srv-arena", "search_documents",
+                     reason=f"scanner:{decision.action} model:{'fooled' if model['fooled'] else 'not fooled' if model['ran'] else 'not run'}")
+        return {"verdict": verdict, "decision": decision.model_dump(), "findings": [f.model_dump() for f in findings],
+                "model": model, "board": board}
 
     add_proxy(app, ctx)
     return app
