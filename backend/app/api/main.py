@@ -23,7 +23,7 @@ from ..policy.evaluate import eligibility, risk_of
 from .schemas import ToolTrustView
 
 SCENARIOS = {"benign": "srv-benign", "poisoned": "srv-poisoned", "invisible": "srv-invisible",
-             "rugpull": "srv-rugpull", "shadow": "srv-shadow"}
+             "rugpull": "srv-rugpull", "shadow": "srv-shadow", "results": "srv-results"}
 EVAL_RESULTS = Path(__file__).resolve().parents[3] / "fixtures" / "evaluation" / "results.json"
 
 
@@ -184,6 +184,7 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
     async def reset():
         demo_only()
         ctx.store.reset()
+        ctx.extra.pop("taint", None)
         try:
             await ctx.http.post(f"{ctx.fixture_base}/control/reset", timeout=5)
         except Exception:

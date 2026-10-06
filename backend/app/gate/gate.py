@@ -5,6 +5,7 @@ from ..manifest.canonicalize import build_manifest, fingerprint
 from ..manifest.diff import changed_fields, diff_manifests
 from ..mcp.client import CaptureError
 from ..policy.evaluate import gate_decision, merge_findings
+from . import runtime
 
 
 def _blocked(codes, **kw) -> dict:
@@ -48,6 +49,14 @@ async def gate_call(ctx: svc.Ctx, sid: str, tool_name: str, args: dict) -> dict:
                      ",".join(decision.reason_codes))
         return _blocked(decision.reason_codes, changed_fields=changed, diff=diff)
 
+    if secret := runtime.tainted(ctx, args):  # approved tool, but a secret seen earlier is flowing into its arguments
+        chain.append(store, "EXECUTION_BLOCKED", sid, tool_name, cur_fp=fp, reason=f"TAINTED_ARGS: {secret[:4]}…")
+        return _blocked(["TAINTED_ARGS"])
     chain.append(store, "EXECUTION_ALLOWED", sid, tool_name, cur_fp=fp)
     result = await ctx.client(srv["endpoint"]).call_tool(tool_name, args)
-    return {"allowed": True, "reason_codes": [], "changed_fields": [], "diff": [], "result": result}
+    runtime.observe(ctx, result)
+    flags = runtime.result_injection(result)
+    if flags:  # the call ran; its output is not handed to the model
+        chain.append(store, "RESULT_INJECTION", sid, tool_name, cur_fp=fp, reason="; ".join(flags)[:200])
+        result = f"[Filigree withheld this tool result: instruction-like text ({flags[0][:80]})]"
+    return {"allowed": True, "reason_codes": [], "changed_fields": [], "diff": [], "result": result, "result_flags": flags}
