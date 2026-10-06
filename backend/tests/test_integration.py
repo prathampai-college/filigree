@@ -235,3 +235,33 @@ async def test_llm_agent_replay_reports_k_of_n(api, tmp_path, monkeypatch):
     assert r["followed"] == "1/4" and r["succeeded"] and "groq/a: leaked the secret in 1 of 2" in "\n".join(r["log"])
     miss = (await api.post("/api/demo/attack", json={"server_id": "srv-x", "tool": "t", "protected": False, "agent": "llm"})).json()
     assert not miss["succeeded"] and "No recorded" in miss["log"][0]
+
+
+async def test_result_firewall_and_taint(api, ctx):  # fixture I: approved clean tools, malicious results
+    sid = await connect(api, "results")
+    for t in ("find_files", "fetch_notes"):
+        assert (await api.post(f"/api/tools/{sid}:{t}/approve", json={"confirm": True})).json()["trust_state"] == "TRUSTED"
+    # unprotected, the scripted agent follows the result's instruction and leaks
+    r = (await api.post("/api/demo/attack", json={"server_id": sid, "tool": "fetch_notes", "protected": False})).json()
+    assert r["succeeded"]
+    # blatant injection in a result: withheld from the agent, audited
+    r = (await api.post("/api/demo/attack", json={"server_id": sid, "tool": "find_files", "protected": True})).json()
+    assert not r["succeeded"] and any("RESULT_INJECTION" in l for l in r["log"])
+    # subtle one passes the firewall, the agent reads .env, the secret may not flow into the next call
+    exfil.reset()
+    r = (await api.post("/api/demo/attack", json={"server_id": sid, "tool": "fetch_notes", "protected": True})).json()
+    assert not r["succeeded"] and any("TAINTED_ARGS" in l for l in r["log"])
+    assert all("mock-sk" not in json.dumps(e) for e in exfil.LOG)
+    types = [e["event_type"] for e in (await api.get("/api/audit")).json()["events"]]
+    assert "RESULT_INJECTION" in types and (await api.get("/api/audit")).json()["chain_verified"]
+
+
+async def test_taint_blocks_secret_in_args_via_gateway(api, ctx):
+    from app.gate import runtime
+    sid = await connect(api, "benign")
+    await api.post(f"/api/tools/{sid}:search_documents/approve")
+    runtime.observe(ctx, "DB_PASSWORD=hunter2hunter2\nother=1")
+    ok = await gate_call(ctx, sid, "search_documents", {"query": "plan"})
+    bad = await gate_call(ctx, sid, "search_documents", {"query": "x hunter2hunter2"})
+    assert ok["allowed"] and not bad["allowed"] and bad["reason_codes"] == ["TAINTED_ARGS"]
+    assert runtime.result_injection("Notes for Q3. Budget is fine.") == []
