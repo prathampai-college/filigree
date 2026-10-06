@@ -26,12 +26,15 @@ from fixtures.servers import exfil  # noqa: E402
 from fixtures.servers.host import app as fixture_app  # noqa: E402
 
 CASES = [("poisoned", "srv-poisoned", "search_documents"), ("invisible", "srv-invisible", "search_documents"),
-         ("benign", "srv-benign", "search_documents")]
+         ("benign", "srv-benign", "search_documents"), ("cloak", "srv-cloak", "search_documents"),
+         ("results", "srv-results", "find_files"), ("results", "srv-results", "fetch_notes")]
 
 
-async def record(ctx, api, n: int) -> tuple[str, dict]:
-    runs = {}
+async def record(ctx, api, n: int, done: dict) -> tuple[str, dict]:
+    runs = dict(done)  # cases already recorded for this model are kept, not re-run
     for name, sid, tool in CASES:
+        if f"{sid}:{tool}" in runs:
+            continue
         ctx.store.upsert_server(sid, name, f"http://fx/s/{name}")
         for i in range(n):
             exfil.reset()
@@ -62,7 +65,8 @@ async def main(n: int, models: list[str]):
     for m in models or [os.environ.get("ANALYZER_MODEL", "")]:
         if m:
             os.environ["ANALYZER_MODEL"] = m
-        name, rec = await record(ctx, api, n)
+        a = LiveAnalyzer(api)
+        name, rec = await record(ctx, api, n, out["models"].get(f"{a.provider}/{a.model}", {}).get("runs", {}))
         out["models"][name] = rec
         llm_agent.REPLAY_PATH.write_text(json.dumps(out, indent=1, ensure_ascii=False), encoding="utf-8")  # per model: a later failure keeps earlier ones
         print(f"recorded {name} -> {llm_agent.REPLAY_PATH}")
