@@ -13,7 +13,7 @@ export type AuditEvent = {
   id: number; ts: number; event_type: string; server_id: string | null; tool_name: string | null
   previous_fingerprint: string | null; current_fingerprint: string | null; changed_fields: string[]; reason: string | null
 }
-export type AttackResult = { succeeded: boolean; log: string[] }
+export type AttackResult = { succeeded: boolean; log: string[]; followed?: string }
 export type Playground = {
   baseline_fingerprint: string; current_fingerprint: string; approval_stale: boolean
   findings: ToolTrustView['analysis']['findings']; decision: ToolTrustView['decision']; risk: string
@@ -37,8 +37,8 @@ export const api = {
   reset: () => post('/api/demo/reset'),
   scenario: (name: string) => post<{ server_id: string }>('/api/demo/scenario', { name }),
   mutate: (mode = 'modified') => post('/api/demo/mutate', { mode }),
-  attack: (server_id: string, tool: string, protected_: boolean) =>
-    post<AttackResult>('/api/demo/attack', { server_id, tool, protected: protected_ }),
+  attack: (server_id: string, tool: string, protected_: boolean, agent: 'scripted' | 'llm' = 'scripted') =>
+    post<AttackResult>('/api/demo/attack', { server_id, tool, protected: protected_, agent }),
   playground: (description: string, baseline_description?: string) =>
     post<Playground>('/api/playground/analyze', { description, baseline_description }),
 }
