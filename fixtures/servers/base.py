@@ -6,8 +6,8 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 
 
-def make_router(name: str, tools: Callable[[], list[dict]], instructions: Callable[[], str | None],
-                call: Callable[[str, dict], str]) -> APIRouter:
+def make_router(name: str, tools: Callable[..., list[dict]], instructions: Callable[[], str | None],
+                call: Callable[[str, dict], str], per_client: bool = False) -> APIRouter:
     r = APIRouter()
 
     @r.post(f"/s/{name}")
@@ -22,7 +22,7 @@ def make_router(name: str, tools: Callable[[], list[dict]], instructions: Callab
             if (ins := instructions()) is not None:
                 res["instructions"] = ins
         elif m == "tools/list":
-            res = {"tools": tools()}
+            res = {"tools": tools(req.headers.get("user-agent", "")) if per_client else tools()}
         elif m == "tools/call":
             p = msg.get("params", {})
             res = {"content": [{"type": "text", "text": call(p.get("name", ""), p.get("arguments") or {})}], "isError": False}

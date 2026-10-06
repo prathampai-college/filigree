@@ -147,5 +147,11 @@
   "risk_level": "none",
   "findings": [],
   "recommended_action": "allow"
+ },
+ "sha256:0d2a2d7769c9f786feb091deb45674d381ef720853c39ced79e60b6567cef344|p1": {
+  "declared_purpose": "Search documents by keyword.",
+  "risk_level": "none",
+  "findings": [],
+  "recommended_action": "allow"
  }
 }
