@@ -19,6 +19,7 @@ Demo script (Demo page): connect *Invisible-text* → **Run WITHOUT Filigree** (
 (APPROVAL BLOCKED) → Tools page shows the identical-looking human view vs. the decoded hidden instruction. Connect *Benign* and
 *Rug pull*, approve `fetch_report`, hit **Trigger rug pull**, then **Call via gate** → `MANIFEST_DRIFT`, field diff on the Diff tab.
 The Playground lets a judge add a zero-width character to an approved description and watch the approval go stale.
+The Demo page also has **Run gateway session**: a full MCP session over `/mcp/srv-rugpull` as raw JSON-RPC (list, human approval, call, rug pull, blocked call), the same messages a real client sends.
 
 ## Use it as a real MCP gateway
 
