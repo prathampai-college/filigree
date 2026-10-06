@@ -1,0 +1,53 @@
+"""Execution gate (D-08): the single path to tools/call. Re-fetches the live definition and re-hashes before every call."""
+from .. import service as svc
+from ..audit import chain
+from ..manifest.canonicalize import build_manifest, fingerprint
+from ..manifest.diff import changed_fields, diff_manifests
+from ..mcp.client import CaptureError
+from ..policy.evaluate import gate_decision, merge_findings
+
+
+def _blocked(codes, **kw) -> dict:
+    return {"allowed": False, "reason_codes": list(codes), "changed_fields": [], "diff": [], "result": None, **kw}
+
+
+async def gate_call(ctx: svc.Ctx, sid: str, tool_name: str, args: dict) -> dict:
+    store = ctx.store
+    try:
+        srv = store.server(sid)
+        if srv is None:
+            raise CaptureError("unknown server")
+        tools, instructions = await ctx.client(srv["endpoint"]).capture()  # re-fetch NOW
+        live = next((t for t in tools if t.get("name") == tool_name), None)
+        if live is None:
+            raise CaptureError("tool no longer offered")
+        manifest, fp = svc.record_capture(ctx, sid, live, instructions)
+    except Exception as e:  # capture or storage failure: fail closed, visibly
+        reason = "CAPTURE_FAILURE"
+        try:
+            chain.append(store, "EXECUTION_BLOCKED", sid, tool_name, reason=f"{reason}: {e}"[:200])
+        except Exception:
+            pass
+        return _blocked([reason])
+
+    appr = store.active_approval(sid, tool_name)
+    llm, _, _ = svc._llm_findings(ctx, fp)
+    findings = merge_findings(svc.scan_for(ctx, manifest), llm)
+    approved_m = store.manifest(appr["fingerprint"]) if appr else None
+    changed = changed_fields(approved_m, manifest) if approved_m else []
+    decision, drift = gate_decision(fp, appr["fingerprint"] if appr else None, findings, changed)
+
+    if decision.action != "allow":
+        diff = diff_manifests(approved_m, manifest) if drift.detected else []
+        if drift.detected:
+            store.mark_stale(appr["id"])
+            chain.append(store, "MANIFEST_DRIFT", sid, tool_name, appr["fingerprint"], fp, changed)
+            chain.append(store, "APPROVAL_REVOKED", sid, tool_name, appr["fingerprint"], fp)
+            await svc.analyze(ctx, manifest, fp)  # so the review-new-version screen is complete
+        chain.append(store, "EXECUTION_BLOCKED", sid, tool_name, appr["fingerprint"] if appr else None, fp, changed,
+                     ",".join(decision.reason_codes))
+        return _blocked(decision.reason_codes, changed_fields=changed, diff=diff)
+
+    chain.append(store, "EXECUTION_ALLOWED", sid, tool_name, cur_fp=fp)
+    result = await ctx.client(srv["endpoint"]).call_tool(tool_name, args)
+    return {"allowed": True, "reason_codes": [], "changed_fields": [], "diff": [], "result": result}
