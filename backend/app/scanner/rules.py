@@ -69,6 +69,8 @@ def scan(manifest: dict, approved: list[tuple[str, str]] = (), known_tools: set[
     sid, name = manifest["server"]["id"], tool.get("name", "")
     texts = list(strings({"tool": tool, "server_instructions": manifest["server"].get("instructions")}))
     for path, s in texts:
+        if path.endswith((".$schema", ".$id")):  # JSON Schema metadata URIs, not text the model reads (found by the real-server scan)
+            continue
         hid = invisible_chars(s)
         if hid:
             dec = decode_hidden(s)
