@@ -19,13 +19,14 @@ Demo script (Demo page): connect *Invisible-text* → **Run WITHOUT Filigree** (
 (APPROVAL BLOCKED) → Tools page shows the identical-looking human view vs. the decoded hidden instruction. Connect *Benign* and
 *Rug pull*, approve `fetch_report`, hit **Trigger rug pull**, then **Call via gate** → `MANIFEST_DRIFT`, field diff on the Diff tab.
 The Playground lets a judge add a zero-width character to an approved description and watch the approval go stale.
+The agent scenes have an **Agent** selector: *Scripted agent* (deterministic stand-in) or *Real model*. Real model hands a tool-calling LLM the tools and a harmless task ("find the Q3 planning notes") plus a simulated `read_file`; unprotected it sees the raw tools, with Filigree it only sees tools with a valid approval. Runs recorded in `fixtures/agent_replay.json` (with k/N counts per model) are replayed offline; with `ANALYZER=live` and a key it runs the model now. Re-record with `uv run --project backend python scripts/record_agent.py 10 <model> ...`.
 The Demo page also has **Run gateway session**: a full MCP session over `/mcp/srv-rugpull` as raw JSON-RPC (list, human approval, call, rug pull, blocked call), the same messages a real client sends.
 
 ## Use it as a real MCP gateway
 
 Each connected server is also exposed at `http://127.0.0.1:8000/mcp/<server_id>` (JSON-RPC over HTTP). `tools/list` returns only
 tools whose approval is currently valid (built from the canonical approved manifest); `tools/call` goes through the gate and returns
-`isError` with the reason code when blocked. Test: `test_mcp_proxy_end_to_end`. The server id is shown on the Tools page.
+`isError` with the reason code when blocked. Tests: `test_mcp_proxy_end_to_end`, and `scripts/sdk_client_check.py` drives it with the official MCP Python SDK client (list, call, rug pull, blocked call; also run in CI): `uv run --project backend --with "mcp>=2" python scripts/sdk_client_check.py`. The server id is shown on the Tools page.
 
 HTTP clients (Claude Code, Cursor):
 
@@ -43,7 +44,7 @@ stdio-only clients (Claude Desktop) use the stdlib bridge `scripts/stdio_bridge.
 ## Tests and evaluation
 
 ```bash
-cd backend && uv run pytest                                   # 49 tests: manifest, scanner, policy, gate, rug pull, failure drills
+cd backend && uv run pytest                                   # 52 tests: manifest, scanner, policy, gate, rug pull, failure drills, real-model agent
 python fixtures/evaluation/build_sets.py                      # (re)generate frozen sets; do not tune after freezing
 uv run --project backend python scripts/evaluate.py           # writes fixtures/evaluation/results.json
 ```
