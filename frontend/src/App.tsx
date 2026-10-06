@@ -13,9 +13,10 @@ export default function App() {
   const [page, setPage] = useState<Page>(fromHash)
   const [tick, setTick] = useState(0)
   const [mode, setMode] = useState<'live' | 'replay' | null>(null)
+  const [recorded, setRecorded] = useState<string | null>(null)
   const bump = () => setTick((t) => t + 1)
   useEffect(() => { const h = () => setPage(fromHash()); addEventListener('hashchange', h); return () => removeEventListener('hashchange', h) }, [])
-  useEffect(() => { api.mode().then((m) => setMode(m.analyzer)).catch(() => setMode(null)) }, [tick])
+  useEffect(() => { api.mode().then((m) => { setMode(m.analyzer); setRecorded(m.recorded) }).catch(() => setMode(null)) }, [tick])
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -27,7 +28,7 @@ export default function App() {
           ))}
         </div>
         <span className={`rounded border px-2 py-0.5 text-xs font-semibold ${mode === 'live' ? 'border-sky-400 text-sky-300' : 'border-amber-500 text-amber-300'}`}>
-          {mode === 'live' ? 'LIVE ANALYSIS' : mode === 'replay' ? 'REPLAY MODE' : 'BACKEND UNAVAILABLE'}
+          {mode === 'live' ? 'LIVE ANALYSIS' : mode === 'replay' ? (recorded ? `REPLAY MODE · recorded from ${recorded}` : 'REPLAY MODE · authored analysis') : 'BACKEND UNAVAILABLE'}
         </span>
       </nav>
       <main className="mx-auto max-w-6xl p-6">

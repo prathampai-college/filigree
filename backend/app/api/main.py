@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from .. import service as svc
 from ..agent import scripted
+from ..analyzer.impl import CACHE_PATH
 from ..audit import chain
 from ..gate.gate import gate_call
 from ..manifest.canonicalize import build_manifest, fingerprint
@@ -67,7 +68,14 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
 
     @app.get("/api/mode")
     def mode():
-        return {"analyzer": ctx.analyzer.mode, "demo": ctx.demo}
+        recorded = None
+        if ctx.analyzer.mode == "replay":  # say what the replayed analysis is: recorded model output or authored text
+            try:
+                p = json.loads(CACHE_PATH.read_text(encoding="utf-8")).get("_provenance")
+                recorded = f"{p['provider']}/{p['model']}" if p else None
+            except (OSError, ValueError, KeyError):
+                pass
+        return {"analyzer": ctx.analyzer.mode, "demo": ctx.demo, "recorded": recorded}
 
     @app.get("/api/servers")
     def servers():
