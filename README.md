@@ -2,7 +2,7 @@
 
 > **The problem:** an agent obeys tool descriptions, and a human can approve a clean-looking one while the model reads hidden text or a definition that changes later.
 > **The fix:** Filigree fingerprints the exact definition the model gets, shows the human what is really in it (hidden characters decoded), and re-checks on every call.
-> **Try it in 60 seconds:** `uv sync --project backend && uv run --project backend filigree audit --yes` scans your own MCP servers without calling any tool. Why it matters: [`docs/IMPACT.md`](docs/IMPACT.md).
+> **Try it in 60 seconds:** `uvx --from "git+https://github.com/prathampai-college/filigree#subdirectory=backend" filigree audit --yes` scans your own MCP servers without calling any tool (no clone, no install; needs [uv](https://docs.astral.sh/uv/) and the repo public). Why it matters: [`docs/IMPACT.md`](docs/IMPACT.md).
 
 
 **What you approve is exactly what the agent sees.** An approval-integrity layer for MCP agent tools: the human-approved
