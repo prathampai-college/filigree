@@ -134,12 +134,14 @@ after seeing the v1 misses, so each set means something different:
 | v2 after tuning | **in-sample** (tuned after seeing v2 misses) | 95.0% / 100% | 100% |
 | v3 (12+10), run once, not tuned | was unseen; **seen** for the "silently" rule since 2026-10-07 | 58.3% / 83.3% (unchanged by the 2026-10-07 rules) | 90.0% (false positive: "Silently queue notifications") |
 | **v4 (12+12), written and frozen before the 2026-10-07 rule change** | **unseen** (baseline, old rules) | **66.7% / 75.0%** | 66.7%; **25% of benign tools blocked** (3: "succeeds silently" style). After the change: same recall, **0% blocked**, in-sample now |
-| **MCPTox, independent** (485 real poisoned tool descriptions, 362 clean) | **independent, scanner only, run once** | **14.8% blocked**, 77.5% flagged beyond cross-tool refs (99.2% counting that medium rule) | 86.5%; 1.4% blocked, 12.2% review. See [`docs/INDEPENDENT-EVAL.md`](docs/INDEPENDENT-EVAL.md) |
+| **MCPTox, independent**: first run, all (485 real poisoned tool descriptions, 362 clean) | **independent, scanner only, run once, before any MCPTox-specific rule** | **14.8% blocked**, 77.5% flagged beyond cross-tool refs | 86.5%; 1.4% blocked, 12.2% review |
+| **MCPTox, held-out half** (200 poisoned, 146 clean; 23 servers never used to build the new "tool steers another tool" rule) | **independent, held out, scored once** | **73.0% blocked** (11.0% before the rule), 99.0% flagged | 91.1%; **1.4% blocked** (unchanged). Dev half 68.4%. See [`docs/INDEPENDENT-EVAL.md`](docs/INDEPENDENT-EVAL.md) |
 | 52 real tools from 7 official servers (assumed benign) | in-sample for the two 2026-10-07 fixes | n/a | 71.2% -> **96.2%**; blocked 1.9% -> 0% |
 
 Read the unseen and independent rows as the honest numbers. On team-authored samples roughly 6 to 7 in 10 poisoned tools are
-blocked outright; on MCPTox, written by other people to look like ordinary tool text, the scanner alone blocks about 1 in 7, and
-the model stage plus human review carry the rest (the LLM-sample result is in `docs/INDEPENDENT-EVAL.md`). Rug-pull drift detection is 100% (5/5) with 0/15 false drift; scanner latency p50 0.08 ms. Raw files:
+blocked outright; on MCPTox, written by other people to look like ordinary tool text, the first run blocked about 1 in 7 and a new
+rule for tools that steer other tools (built on half the servers) blocks 73% of the held-out half, so the rest still depends on
+the model stage and human review (the LLM-sample result is in `docs/INDEPENDENT-EVAL.md`). Rug-pull drift detection is 100% (5/5) with 0/15 false drift; scanner latency p50 0.08 ms. Raw files:
 `fixtures/evaluation/results*.json` (`results_v1_pretuning.json` keeps the original numbers). The 12 "public" samples are
 **illustrative**: modeled on published attack classes, not quoted from them (checked 2026-10-06, see `fixtures/evaluation/SOURCES.md`; one cited link is dead).
 
@@ -158,7 +160,7 @@ built only from the canonical manifest of currently-valid approvals.
 
 ## Not protected (state this plainly)
 
-Anyone who can reach the port when `FILIGREE_TOKENS` is not set (the local demo is open; tokens are shared secrets, no TLS, reads stay open) · resources and prompts (the gateway proxies tools only) · image/resource tool results (not inspected) · server-initiated messages · a stdio server that cloaks after the one probe at discovery · detection of MCPTox-style poisonings by the scanner alone (14.8% blocked) · malicious server behavior with an unchanged definition (partially: taint blocks known secrets flowing into it) · instructions
+Anyone who can reach the port when `FILIGREE_TOKENS` is not set (the local demo is open; tokens are shared secrets, no TLS, reads stay open) · resources and prompts (the gateway proxies tools only) · image/resource tool results (not inspected) · server-initiated messages · a stdio server that cloaks after the one probe at discovery · MCPTox-style poisonings the scanner misses (27% of the held-out half; attacks that do not name a sibling tool or use a steering verb) · malicious server behavior with an unchanged definition (partially: taint blocks known secrets flowing into it) · instructions
 inside tool *results* (partially: heuristic result firewall) · secrets the model re-encodes before sending · clients that
 bypass both the gateway and the hook · a server that cloaks by IP or timing rather than client identity · the race between
 the gate's re-fetch and the call · subtle semantic injections the scanner misses and the analyzer also misses.

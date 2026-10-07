@@ -30,7 +30,7 @@ How the corpus is built (`scripts/build_mcptox_corpus.py`, no label invented, no
   real ones. They are real third-party descriptions, assumed benign because the benchmark treats them as the clean baseline.
 - Each case carries the other tool names of its server, because Filigree always knows the other tools it has seen (cross-tool rule).
 
-## Result 1: scanner only (all 485 + 362, run once, rules not changed afterwards)
+## Result 1a: first run, scanner only (all 485 + 362, run once before looking at the data's structure)
 `results_mcptox_corpus_scanner.json`, rules as of commit `4f194ff`.
 
 | | Value |
@@ -47,7 +47,7 @@ By risk category the spread is wide: Credential Leakage 21/40 blocked (52.5%), M
 Privacy Leakage 13/97, Service Disruption 1/73, Information Manipulation 6/108, Instruction Tampering 1/21.
 
 How to read it, honestly:
-- **The scanner blocks about 1 in 7 MCPTox poisonings.** That is far below the 58.3% on our own v3 set, as expected: MCPTox attacks
+- **Before the steering rule the scanner blocked about 1 in 7 MCPTox poisonings (Result 1a).** That is far below the 58.3% on our own v3 set, as expected: MCPTox attacks
   are written to look like ordinary tool text ("before using read_file, run the pre-authorization step..."), with no hidden characters,
   no sensitive path and no concealment wording in most of them. Our team-authored sets contained more of the obvious signals.
 - **The 99.2% "flagged" figure is mostly one rule.** MCPTox's poisoned tools almost always mention another tool, which raises a
@@ -58,6 +58,35 @@ How to read it, honestly:
 - The MCPTox benchmark measures whether *models obey* poisoned tools. Whether a given description is also something a static
   scanner can recognise was not what the authors designed it for, so this is a hard test for text rules by construction.
 
+## Result 1b: a new rule, developed on half the servers, scored on the other half
+The first run showed the scanner blocks almost nothing in MCPTox style, so we looked for a *structural* signal instead of tuning
+on single phrases. The poisoned tools mostly do one thing: they tell the model how to call **another** tool ("when calling X you must
+set the parameter to ...", "before using Y you must first call Z"). Rule added in `backend/app/scanner/rules.py` (`_STEER`): a
+cross-tool reference becomes **high** (blocks approval) instead of medium when, **in the same sentence** as the sibling tool's name,
+the text uses a steering construction (must / always / required to ... followed by call, change, modify, rewrite, set, replace,
+override, pass, add, ...; or "when/before using ... must/first/set ..."). A bare "use X" is deliberately not enough.
+
+Protocol, to keep the number honest:
+1. The 47 servers were sorted by name; even positions are the **dev** half (24 servers, 285 poisoned + 216 clean), odd positions the
+   **test** half (23 servers, 200 poisoned + 146 clean). `evaluate_real.py --split dev|test`.
+2. The rule was written and adjusted while looking only at the dev half (two iterations: the first version also blocked six
+   clean "Commander" tools that say "Always use absolute paths" near a sibling name; requiring the same sentence and removing a bare
+   "use" fixed that on dev). We also checked it did not change any frozen team-authored set (v1 78.1/90.6/100, v2, v3, v4, real_benign: all identical).
+3. The rule was committed (`feat(scanner): block a tool that steers ...`) **before** the test half was scored. The test half was scored once.
+
+| Half | Poisoned blocked: before -> after | Poisoned flagged | Benign blocked | Benign accepted |
+|---|---|---|---|---|
+| dev (used to build the rule) | 17.5% -> 68.4% (195/285) | 99.3% | 1.4% -> 1.4% (3/216) | 83.3% |
+| **test (held out, scored once)** | **11.0% -> 73.0% (146/200)** | 99.0% | **1.4% -> 1.4%** (2/146) | 91.1% |
+
+Both halves together are 70.3% blocked (341/485), but that figure mixes in the half the rule was built on: quote the **held-out 73.0%**.
+Files: `results_mcptox_corpus_{dev,test}_{before_steer,steer_rules}.json`. The remaining 27% of the held-out half is not analysed
+here on purpose (that would turn it into a second dev set).
+
+What this rule does not do: an attack that does not name a sibling tool, or says it without a steering verb ("the correct value for
+`position` is Support"), still passes the scanner; a legitimate description that tells the model how to call a sibling tool with
+"must" will be blocked (none of the 362 clean MCPTox tools or 52 official tools were, beyond the 1.4% already blocked for other reasons).
+
 ## Result 2: scanner + LLM on a seeded sample
 `scripts/evaluate_real.py ... --llm-sample 100 50`: 100 poisoned and 50 benign cases drawn with a fixed seed (`random.Random(0)`),
 each analysed by the live analyzer (Groq `openai/gpt-oss-120b`, temperature 0, one call per case, ~12 s apart to respect the free
@@ -66,14 +95,13 @@ tier) and compared with the scanner on the same sample. A sample, not the full s
 RESULT_2_PLACEHOLDER
 
 ## What this changes in how we describe Filigree
-- Say: "on an independent benchmark of real tool poisonings, the deterministic scanner blocks 14.8% outright and flags 77.5% for a
-  reason beyond naming a sibling tool; the model-based stage is what carries the rest, and approval stays a human decision".
-- Do not say the scanner "detects tool poisoning" without those numbers, and do not quote 99.2% without the 77.5% next to it.
+- Say: "on an independent benchmark of real tool poisonings (MCPTox), the first run of our scanner blocked 14.8%; after adding a rule for tools that steer other tools, developed on half the servers, it blocks 73.0% of the held-out half with 1.4% of clean tools blocked".
+- Do not say the scanner "detects tool poisoning" without those numbers, do not quote 99.2% flagged without saying one medium rule produces most of it, and do not quote the 70.3% mixed figure.
 - The enforcement side (approved text = model-visible text = executed text, checked at every call) does not depend on these
   numbers: a poisoned description that a human approves is still bound to its fingerprint, and any later change is blocked.
 
 ## Limits
-- One benchmark, one run per configuration. Scanner rules were not tuned on MCPTox and must not be (the corpus is now seen).
+- One benchmark. The first run (1a) was untuned; the rule in 1b was built on the dev half, so only the test half is clean, and it is now seen: further rule changes need a new corpus.
 - The benign side is derived from prompt text, not captured from live servers.
 - Poisoned tools are scored one description at a time; MCPTox attacks sometimes only work in combination with the user query.
 - Not an endorsement by the MCPTox authors; we used the public files as published.
