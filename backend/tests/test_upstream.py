@@ -101,3 +101,24 @@ async def test_register_stdio_server_is_opt_in(monkeypatch):
         assert (await api.post("/api/servers", json={"id": "x", "endpoint": "file:///etc/passwd"})).status_code == 422
     stdio.close()
     await http.aclose()
+
+
+async def test_gateway_passes_structured_content_through(tmp_path):  # found by the real filesystem server + the MCP SDK client
+    from app.mcp.proxy import handle
+    structured = {"content": "plan", "n": 3}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        msg = json.loads(req.content)
+        if "id" not in msg:
+            return httpx.Response(202)
+        res = {"initialize": {}, "tools/list": {"tools": [{**TOOL, "name": "read", "description": "Read a document."}]},
+               "tools/call": {"content": [{"type": "text", "text": "plan"}], "structuredContent": structured, "isError": False}}[msg["method"]]
+        return httpx.Response(200, json={"jsonrpc": "2.0", "id": msg["id"], "result": res})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        ctx = svc.Ctx(Store(), ReplayAnalyzer(), http)
+        ctx.store.upsert_server("s", "s", "http://x/mcp")
+        await svc.discover(ctx, "s")
+        svc.approve(ctx, "s", "read", confirm=True)
+        r = await handle(ctx, "s", {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "read", "arguments": {}}})
+        assert r["result"]["structuredContent"] == structured and not r["result"]["isError"]

@@ -3,7 +3,7 @@ from .. import service as svc
 from ..audit import chain
 from ..manifest.canonicalize import build_manifest, fingerprint
 from ..manifest.diff import changed_fields, diff_manifests
-from ..mcp.client import CaptureError
+from ..mcp.client import CaptureError, result_text
 from ..policy.evaluate import gate_decision, merge_findings
 from . import runtime
 
@@ -58,10 +58,11 @@ async def gate_call(ctx: svc.Ctx, sid: str, tool_name: str, args: dict, execute:
     chain.append(store, "EXECUTION_ALLOWED", sid, tool_name, cur_fp=fp, reason=None if execute else "pre-check; client calls the server")
     if not execute:
         return {"allowed": True, "reason_codes": [], "changed_fields": [], "diff": [], "result": None}
-    result = await client.call_tool(tool_name, args)
+    raw = await client.call_raw(tool_name, args)
+    result = result_text(raw)
     runtime.observe(ctx, result)
     flags = runtime.result_injection(result)
     if flags:  # the call ran; its output is not handed to the model
         chain.append(store, "RESULT_INJECTION", sid, tool_name, cur_fp=fp, reason="; ".join(flags)[:200])
-        result = f"[Filigree withheld this tool result: instruction-like text ({flags[0][:80]})]"
-    return {"allowed": True, "reason_codes": [], "changed_fields": [], "diff": [], "result": result, "result_flags": flags}
+        result, raw = f"[Filigree withheld this tool result: instruction-like text ({flags[0][:80]})]", None
+    return {"allowed": True, "reason_codes": [], "changed_fields": [], "diff": [], "result": result, "result_flags": flags, "raw": raw}

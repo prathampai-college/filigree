@@ -19,8 +19,12 @@ _SESSIONS: dict[tuple[str, str], "StdioSession"] = {}
 _LOCK = threading.Lock()
 
 
-def endpoint_for(argv: list[str], env: dict | None = None) -> str:
-    return PREFIX + json.dumps({"argv": argv, "env": env or {}}, sort_keys=True)
+# clean_env: only what a launcher needs to run (PATH, home/temp dirs, locale), never the caller's other variables
+_BASE_ENV = ("PATH", "HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "SYSTEMROOT", "COMSPEC", "PATHEXT", "TEMP", "TMP", "TMPDIR", "LANG")
+
+
+def endpoint_for(argv: list[str], env: dict | None = None, clean_env: bool = False) -> str:
+    return PREFIX + json.dumps({"argv": argv, "env": env or {}, **({"clean_env": True} if clean_env else {})}, sort_keys=True)
 
 
 def is_stdio(endpoint: str) -> bool:
@@ -36,7 +40,9 @@ class StdioSession:
         spec = json.loads(endpoint[len(PREFIX):])
         argv = list(spec["argv"])
         argv[0] = shutil.which(argv[0]) or argv[0]  # npx -> npx.cmd on Windows
-        env = {k: v for k, v in os.environ.items() if not any(s in k.upper() for s in _SECRETISH)} | spec.get("env", {})
+        base = {k: v for k, v in os.environ.items() if (k.upper() in _BASE_ENV if spec.get("clean_env")
+                                                         else not any(s in k.upper() for s in _SECRETISH))}
+        env = base | spec.get("env", {})
         self.identity, self.instructions, self._id = identity, None, 0
         self.io = threading.Lock()
         self.lines: queue.Queue = queue.Queue()
@@ -98,9 +104,8 @@ class StdioSession:
                 return tools
         raise StdioError("tools/list pagination did not terminate")
 
-    def call(self, name: str, args: dict) -> str:
-        res = self._rpc("tools/call", {"name": name, "arguments": args}, 120)
-        return "".join(c.get("text", "") for c in res.get("content", []))
+    def call(self, name: str, args: dict) -> dict:
+        return self._rpc("tools/call", {"name": name, "arguments": args}, 120)
 
     def close(self):
         self.p.kill()
@@ -129,7 +134,7 @@ async def capture(endpoint: str, identity: str) -> tuple[list[dict], str | None]
         raise
 
 
-async def call_tool(endpoint: str, identity: str, name: str, args: dict) -> str:
+async def call_tool(endpoint: str, identity: str, name: str, args: dict) -> dict:
     def run():
         s = _session(endpoint, identity)
         with s.io:

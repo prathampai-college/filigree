@@ -1,6 +1,7 @@
 """Capture client: JSON-RPC over HTTP (plain JSON or SSE replies, Mcp-Session-Id) or stdio. Raw tool dicts are returned
 untouched (strict JSON parse only)."""
 import itertools
+import json
 
 import httpx
 
@@ -13,6 +14,14 @@ PROTOCOL = "2025-06-18"
 
 class CaptureError(Exception):
     pass
+
+
+def result_text(res: dict) -> str:
+    """Everything in a tool result that the model would read: text blocks plus structured content."""
+    text = "".join(c.get("text", "") for c in res.get("content", []))
+    if res.get("structuredContent") is not None:
+        text += ("\n" if text else "") + json.dumps(res["structuredContent"], ensure_ascii=False)
+    return text
 
 
 def _sse_message(text: str, want_id) -> str:
@@ -72,11 +81,14 @@ class McpClient:
                 return tools, init.get("instructions")
         raise CaptureError("tools/list pagination did not terminate")
 
-    async def call_tool(self, name: str, args: dict) -> str:
+    async def call_raw(self, name: str, args: dict) -> dict:
+        """The full tools/call result (content, structuredContent, isError), so a gateway can pass it on unchanged."""
         if stdio.is_stdio(self.endpoint):
             try:
                 return await stdio.call_tool(self.endpoint, self.identity, name, args)
             except stdio.StdioError as e:
                 raise CaptureError(str(e)) from e
-        res = await self._rpc("tools/call", {"name": name, "arguments": args})
-        return "".join(c.get("text", "") for c in res.get("content", []))
+        return await self._rpc("tools/call", {"name": name, "arguments": args})
+
+    async def call_tool(self, name: str, args: dict) -> str:
+        return result_text(await self.call_raw(name, args))
