@@ -1,3 +1,14 @@
+# Short cut: 90 seconds, 4 beats
+
+Use when time is tight or judges walk by. Lead with enforcement, not detection rates.
+
+1. **Invisible-text** tool, Tools page: identical to the benign tool on screen; highlight shows the decoded hidden instruction. "You cannot approve what you cannot see."
+2. **Poisoned**, Real model: WITHOUT leaks the fake secret, WITH never offers the tool. "Nothing to obey."
+3. **Rug pull** gateway session: approved, server changes, next call `MANIFEST_DRIFT`. "Approval is bound to every call."
+4. **`filigree audit` on the judge's own `.mcp.json`** (or yours): blocked / review / clean in seconds, no tool called.
+
+Taint, result firewall, cloaking and the numbers go to Q&A (see QA.md). If asked for detection rates, quote the held-out MCPTox 73.0% next to the 14.8% first run.
+
 # 3-minute demo script
 
 Start: `powershell -File scripts/demo.ps1` (or `sh scripts/demo.sh`), open http://127.0.0.1:5173. The badge must read REPLAY MODE · recorded from groq/openai/gpt-oss-120b. Everything below runs offline. Click **Reset** on the Demo page before you start.
