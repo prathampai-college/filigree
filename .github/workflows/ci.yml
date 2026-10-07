@@ -12,6 +12,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --project backend
       - run: uv run --project backend pytest -q backend
+      - run: uv run --project backend python scripts/check_results.py  # committed evaluation numbers still hold
       - run: uv run --project backend --with "mcp>=2" python scripts/sdk_client_check.py
 
   frontend:
