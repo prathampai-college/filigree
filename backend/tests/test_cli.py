@@ -50,7 +50,7 @@ def test_audit_unstartable_server_is_reported_not_hidden(tmp_path, capsys):
 
 def test_run_gateway_offers_only_approved_tools_and_blocks_drift(tmp_path):
     desc, db = tmp_path / "desc.txt", str(tmp_path / "f.db")
-    env = {**os.environ, "FILIGREE_DB": db, "STDIO_DESC_FILE": str(desc), "PYTHONPATH": str(ROOT / "backend")}
+    env = {**os.environ, "FILIGREE_DB": db, "STDIO_DESC_FILE": str(desc), "PYTHONPATH": os.pathsep.join(filter(None, [str(ROOT / "backend"), os.environ.get("PYTHONPATH")]))}
     p = subprocess.Popen([sys.executable, "-m", "app.cli", "run", "srv-echo", "--", sys.executable, ECHO], cwd=ROOT / "backend",
                          env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, encoding="utf-8")
 

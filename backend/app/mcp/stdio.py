@@ -109,6 +109,7 @@ class StdioSession:
 
     def close(self):
         self.p.kill()
+        self.p.wait()  # reap it now: poll() right after kill() can still say "running" on Linux
 
 
 def _session(endpoint: str, identity: str) -> StdioSession:
@@ -127,11 +128,13 @@ async def capture(endpoint: str, identity: str) -> tuple[list[dict], str | None]
         s = _session(endpoint, identity)
         with s.io:
             return s.list_tools(), s.instructions
-    try:
-        return await asyncio.to_thread(run)
-    except StdioError:
-        close(endpoint, identity)
-        raise
+    for attempt in range(2):  # listing is idempotent: if the process died since last time, start a fresh one once
+        try:
+            return await asyncio.to_thread(run)
+        except StdioError:
+            close(endpoint, identity)
+            if attempt:
+                raise
 
 
 async def call_tool(endpoint: str, identity: str, name: str, args: dict) -> dict:
