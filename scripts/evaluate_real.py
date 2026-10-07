@@ -34,7 +34,14 @@ raw = path.read_text(encoding="utf-8")
 frozen = path.parent / f"FROZEN_{path.stem}.sha256"
 intact = frozen.exists() and hashlib.sha256(raw.encode("utf-8")).hexdigest() == frozen.read_text().strip()
 rows = []
-for c in json.loads(raw):
+split = sys.argv[sys.argv.index("--split") + 1] if "--split" in sys.argv else None  # dev/test: servers sorted by name, even index = dev
+all_cases = json.loads(raw)
+if split:
+    servers = sorted({c["server"] for c in all_cases})
+    dev = {s for i, s in enumerate(servers) if i % 2 == 0}
+    all_cases = [c for c in all_cases if (c["server"] in dev) == (split == "dev")]
+    label = f"{split}_{label}"
+for c in all_cases:
     m = build_manifest(c["tool"], f"real-{c.get('server', 'x')}", c.get("instructions"))
     rows.append((c, eligibility(scan(m, known_tools=set(c.get("tool_names", []))), True).action))
 pos = [(c, a) for c, a in rows if c["label"] == "poisoned"]

@@ -1,0 +1,25 @@
+{
+ "label": "steer_rule",
+ "set_frozen_intact": true,
+ "poisoned": 12,
+ "benign": 10,
+ "recall_blocked_pct": 58.3,
+ "recall_flagged_pct": 83.3,
+ "benign_acceptance_pct": 90.0,
+ "missed": [
+  "u02",
+  "u09"
+ ],
+ "not_blocked": [
+  "u02",
+  "u04",
+  "u08",
+  "u09",
+  "u10"
+ ],
+ "benign_blocked_pct": 0.0,
+ "blocked_false_positives": [],
+ "false_positives": [
+  "v09"
+ ]
+}

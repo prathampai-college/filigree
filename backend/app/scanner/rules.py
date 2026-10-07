@@ -12,6 +12,8 @@ _WEAK_SECRET = re.compile(r"\b(api[_ -]?key|token|password|secret|credentials?|p
 _ACTION = re.compile(r"\b(read|send|upload|post|forward|include|attach|exfiltrat\w*|leak|copy|append|transmit|e-?mail|mail)\b", re.I)
 _URL = re.compile(r"https?://[^\s\"')>]+|\b[\w-]+(\.[\w-]+)*\.(local|com|net|io|org|xyz)\b/?\S*", re.I)
 _CONCEAL = re.compile(r"\b(do not|don't|never)\s+(tell|mention|reveal|disclose|show|inform|let)\b[^.]{0,40}\b(user|human|anyone)\b|\bdo not (disclose|reveal)\b|\bwithout (telling|informing) the user\b|\b(need|needs) not (be told|know)\b|\bdoes not need to (be told|know)\b|\b(keep|kept) (it|this|that)\b[^.]{0,30}\b(between|confidential|secret|from)\b|\bwithout\b[^.]{0,40}\bnotic(e|ing)\b", re.I)
+_STEER = re.compile(r"\b(must|always|required to|has to|need to|ensure)\b[^.]{0,80}\b(call|invoke|change|modify|rewrite|set|replace|override|pass|add|append|prepend|swap)\b|\b(before|prior to|when|whenever)\b[^.]{0,40}\b(using|calling|invoking|running)\b[^.]{0,120}\b(must|always|first|should|change|modify|rewrite|set)\b", re.I)
+_SENTENCES = re.compile(r"(?<=[.!?])\s+|\n+")  # a steering verb counts only in the same sentence as the tool it steers
 _QUIET = re.compile(r"\b(silently|quietly)\b", re.I)
 _IMPERATIVE = re.compile(r"\bIMPORTANT\s*:|\bignore (all |any )?(previous|prior|above)\b|\bbefore returning\b|\byou must\b|\bdisregard\b|\bSYSTEM\s*:|\bnew instructions?\s*:|\bforget (your|all|any)\b[^.]{0,15}\b(previous|prior|guidance|instructions)\b", re.I)
 _ANALYZER = re.compile(r"\b(report|return|output|say)\b[^.]{0,20}\b(no|zero|empty)\b[^.]{0,10}\bfindings?\b|\bpre-?approved\b|\balready (been )?(approved|reviewed|vetted|audited|verified)\b|\bskip (any |the )?(review|check|scan)\b|\b(security )?(scanner|analyzer|reviewer)\b", re.I)
@@ -108,7 +110,10 @@ def scan(manifest: dict, approved: list[tuple[str, str]] = (), known_tools: set[
             out.append(_f("external_exfiltration", sev, f"{path}: destination {m.group(0)}"))
         for other in () if path.startswith("server_instructions") else known_tools - {name}:  # server text names its own tools; not a cross-tool instruction
             if re.search(rf"\b{re.escape(other)}\b", s):
-                out.append(_f("cross_tool_instruction", "medium", f"{path}: references tool {other}"))
+                steer = path.endswith("description") and not path.startswith("server_instructions") and next(
+                    (m for sen in _SENTENCES.split(s) if re.search(rf"\b{re.escape(other)}\b", sen) and (m := _STEER.search(sen))), None)
+                out.append(_f("cross_tool_instruction", "high" if steer else "medium",
+                              f"{path}: tells the model how to use tool {other}: {steer.group(0)}" if steer else f"{path}: references tool {other}"))
     props = (tool.get("inputSchema") or {}).get("properties") or {}
     desc = (tool.get("description") or "").lower()
     for p in props:
