@@ -20,7 +20,7 @@ uv run --project backend filigree serve                                        #
 uv run --project backend filigree run files -- npx -y @modelcontextprotocol/server-filesystem C:/work   # as a stdio command in claude_desktop_config.json
 ```
 
-`serve` and `run` must use the same `FILIGREE_DB` file (default `filigree.db` in the working directory), which is how approvals made in the UI reach the stdio gateway. Only tools a human approved in the UI are offered, and every call is re-checked against the approved fingerprint. Works with stdio
+`serve` and `run` must use the same `FILIGREE_DB` file (default `filigree.db` in the working directory), which is how approvals made in the UI reach the stdio gateway. The Tools page also has a **Connect and scan** form for http URLs and (with `FILIGREE_ALLOW_STDIO=1`) stdio commands. Only tools a human approved in the UI are offered, and every call is re-checked against the approved fingerprint. Works with stdio
 servers, HTTP servers and SSE replies; set `FILIGREE_TOKENS="alice:tok"` so only approvers can approve and the audit names them.
 Verified end to end on the official filesystem server with the official MCP SDK client (`scripts/real_gateway_check.py`, 7/7).
 Full guide and limits: [`docs/REAL-SERVERS.md`](docs/REAL-SERVERS.md).

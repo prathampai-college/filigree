@@ -34,9 +34,10 @@ export function Tools({ tick, bump }: { tick: number; bump: () => void }) {
         <span className="text-violet-300">{count('STALE')} Stale</span>
         <span className="text-red-300">{count('BLOCKED')} Blocked</span>
       </div>
+      <ConnectServer onDone={bump} onError={setErr} />
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         <ul className="space-y-2">
-          {views.length === 0 && <li className="text-sm text-zinc-400">No tools yet. Open the Demo page and connect a scenario.</li>}
+          {views.length === 0 && <li className="text-sm text-zinc-400">No tools yet. Connect a server above, or open the Demo page and connect a scenario.</li>}
           {views.map((x) => (
             <li key={x.tool.id}>
               <button onClick={() => setSel(x.tool.id)} aria-current={x.tool.id === sel}
@@ -69,6 +70,35 @@ export function Tools({ tick, bump }: { tick: number; bump: () => void }) {
         )}
       </div>
     </div>
+  )
+}
+
+// Connect a real server: an http(s) MCP URL, or a command to run over stdio (the backend needs FILIGREE_ALLOW_STDIO=1 for commands).
+function ConnectServer({ onDone, onError }: { onDone: () => void; onError: (m: string) => void }) {
+  const [id, setId] = useState('')
+  const [kind, setKind] = useState<'url' | 'command'>('command')
+  const [target, setTarget] = useState('')
+  const [busy, setBusy] = useState(false)
+  const go = () => {
+    const argv = (target.match(/"[^"]*"|\S+/g) ?? []).map((a) => a.replace(/^"|"$/g, ''))
+    setBusy(true)
+    api.addServer(id.trim(), kind === 'url' ? { endpoint: target.trim() } : { command: argv })
+      .then(() => { onError(''); setTarget(''); onDone() }).catch((e) => onError(String(e.message))).finally(() => setBusy(false))
+  }
+  const field = 'rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm'
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); go() }} className="flex flex-wrap items-end gap-2 rounded border border-zinc-800 p-3">
+      <label className="text-xs text-zinc-400">Server id<input value={id} onChange={(e) => setId(e.target.value)} required pattern="[A-Za-z0-9_.\-]{1,64}"
+        placeholder="files" className={`${field} mt-1 block w-32`} /></label>
+      <label className="text-xs text-zinc-400">Type
+        <select value={kind} onChange={(e) => setKind(e.target.value as 'url' | 'command')} className={`${field} mt-1 block`}>
+          <option value="command">stdio command</option><option value="url">http(s) URL</option></select></label>
+      <label className="min-w-64 flex-1 text-xs text-zinc-400">{kind === 'url' ? 'MCP endpoint' : 'Command (quote arguments with spaces)'}
+        <input value={target} onChange={(e) => setTarget(e.target.value)} required className={`${field} mt-1 block w-full font-mono`}
+          placeholder={kind === 'url' ? 'https://example.com/mcp' : 'npx -y @modelcontextprotocol/server-filesystem C:/work'} /></label>
+      <button disabled={busy} className="rounded border border-zinc-500 px-3 py-1 text-sm font-semibold hover:bg-zinc-800 disabled:opacity-50">
+        {busy ? 'Scanning…' : 'Connect and scan'}</button>
+    </form>
   )
 }
 

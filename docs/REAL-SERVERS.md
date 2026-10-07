@@ -64,6 +64,13 @@ serves both transports). Approve tools in the UI running on the **same database*
 confirmation when approving (status `unavailable`, not a clean bill). Set `ANALYZER=live` and a key in `.env` for real analysis.
 Diagnostics go to stderr only; stdout carries nothing but JSON-RPC.
 
+### Connecting a server in the UI
+The Tools page has a **Connect and scan** form: a server id, then either an `http(s)` MCP URL or a stdio command (quote arguments that
+contain spaces). It calls the endpoint below, so a command only works when the backend runs with `FILIGREE_ALLOW_STDIO=1`; otherwise the
+UI shows the 403 message. Checked on 2026-10-07 in the browser against a live `filigree serve`: connecting the stdio echo server
+listed its tool as REVIEW REQUIRED (`ANALYSIS_UNAVAILABLE`, because no analyzer key was set), approval made it TRUSTED, an agent
+call through the gate returned `echo:hello`, and `/mcp/echo` listed exactly that tool.
+
 ### Registering a server through the API
 `POST /api/servers` with `{"id", "endpoint"}` (http/https only) or `{"id", "command": [...], "env": {...}}`. **A `command` makes
 the backend spawn a process, which is remote code execution if the port is reachable**, so it is refused (403) unless the backend

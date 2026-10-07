@@ -34,6 +34,7 @@ export type Arena = {
 export const api = {
   mode: () => j<{ analyzer: 'live' | 'replay'; demo: boolean; recorded: string | null }>('/api/mode'),
   tools: () => j<ToolTrustView[]>('/api/tools'),
+  addServer: (id: string, target: { endpoint?: string; command?: string[] }) => post<{ server_id: string; tools: string[] }>('/api/servers', { id, ...target }),
   diff: (id: string) => j<{ changes: Change[] }>(`/api/tools/${enc(id)}/diff`),
   manifest: (id: string) => j<{ fingerprint: string; manifest: unknown }>(`/api/tools/${enc(id)}/manifest`),
   approve: (id: string, confirm = false) => post<ToolTrustView>(`/api/tools/${enc(id)}/approve`, { confirm }),

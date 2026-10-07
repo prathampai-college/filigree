@@ -1,1 +1,4 @@
-{"version":"0.0.1","configurations":[{"name":"frontend","runtimeExecutable":"npm","runtimeArgs":["--prefix","frontend","run","dev"],"port":5173}]}
+{"version":"0.0.1","configurations":[
+{"name":"frontend","runtimeExecutable":"npm","runtimeArgs":["--prefix","frontend","run","dev"],"port":5173},
+{"name":"backend","runtimeExecutable":"uv","runtimeArgs":["run","--project","backend","filigree","serve"],"port":8000,"env":{"FILIGREE_ALLOW_STDIO":"1","FILIGREE_DB":"backend/ui-test.db"}}
+]}
