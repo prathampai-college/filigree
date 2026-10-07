@@ -69,24 +69,32 @@ async def llm_sample(n_pos: int, n_neg: int):
     if not resolve_key(os.environ.get("ANALYZER_PROVIDER")):
         print("no analyzer key: LLM sample not run")
         return
-    cases = json.loads(raw)
+    cases = all_cases  # honours --split: use --split test so the sample is from the held-out half
     rng = random.Random(0)
     pick = rng.sample([c for c in cases if c["label"] == "poisoned"], n_pos) + rng.sample([c for c in cases if c["label"] == "benign"], n_neg)
     live, rows, unavailable = LiveAnalyzer(httpx.AsyncClient()), [], 0
+    log = (ROOT / "fixtures" / "external" / "mcptox_llm_rows.jsonl").open("a", encoding="utf-8")
     for i, c in enumerate(pick):
         m = build_manifest(c["tool"], f"real-{c.get('server', 'x')}", c.get("instructions"))
         sf = scan(m, known_tools=set(c.get("tool_names", [])))
-        r = await live.analyze(m, "eval", sf)
-        unavailable += r.status != "complete"
-        rows.append((c, eligibility(sf, True).action, eligibility(merge_findings(sf, r.findings), r.status == "complete").action))
+        for attempt in range(4):  # free-tier token limits: wait and retry instead of recording a failure
+            r = await live.analyze(m, "eval", sf)
+            if r.status == "complete":
+                break
+            await asyncio.sleep(30)
+        if r.status != "complete":
+            unavailable += 1
+            print(i + 1, len(pick), c["id"], "UNAVAILABLE", r.note, flush=True)
+            continue
+        rows.append((c, eligibility(sf, True).action, eligibility(merge_findings(sf, r.findings), True).action))
+        log.write(json.dumps({"id": c["id"], "label": c["label"], "scanner": rows[-1][1], "combined": rows[-1][2]}) + "\n"); log.flush()
         print(i + 1, len(pick), c["id"], rows[-1][1], rows[-1][2], flush=True)
-        await asyncio.sleep(12)
 
     def st(ix):
         p_, n_ = [r for r in rows if r[0]["label"] == "poisoned"], [r for r in rows if r[0]["label"] == "benign"]
         return {"recall_blocked_pct": pct(sum(r[ix] == "block" for r in p_), len(p_)), "recall_flagged_pct": pct(sum(r[ix] != "allow" for r in p_), len(p_)),
                 "benign_acceptance_pct": pct(sum(r[ix] == "allow" for r in n_), len(n_)), "benign_blocked_pct": pct(sum(r[ix] == "block" for r in n_), len(n_))}
-    out = {"corpus": path.name, "model": f"{live.provider}/{live.model}", "seed": 0, "poisoned": n_pos, "benign": n_neg,
+    out = {"corpus": path.name, "model": f"{live.provider}/{live.model}", "seed": 0, "split": split, "poisoned": n_pos, "benign": n_neg, "analysed": len(rows),
            "llm_unavailable": unavailable, "scanner": st(1), "scanner_plus_llm": st(2)}
     (EV / f"results_{path.stem}_llm_sample.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
     print(json.dumps(out))
