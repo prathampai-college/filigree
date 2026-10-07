@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS tools(server_id TEXT, tool_name TEXT, current_fp TEXT
 CREATE TABLE IF NOT EXISTS analyses(fingerprint TEXT, stage TEXT, mode TEXT, status TEXT, risk TEXT, findings_json TEXT,
   latency_ms REAL, version TEXT, created_at REAL, PRIMARY KEY(fingerprint, stage));
 CREATE TABLE IF NOT EXISTS approvals(id INTEGER PRIMARY KEY AUTOINCREMENT, server_id TEXT, tool_name TEXT, fingerprint TEXT,
-  decision TEXT, confirmed INTEGER, approved_at REAL, policy_version TEXT, analysis_mode TEXT, status TEXT);
+  decision TEXT, confirmed INTEGER, approved_at REAL, policy_version TEXT, analysis_mode TEXT, status TEXT, approved_by TEXT);
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, event_type TEXT, server_id TEXT, tool_name TEXT,
   previous_fingerprint TEXT, current_fingerprint TEXT, changed_fields TEXT, reason TEXT, prev_event_hash TEXT, hash TEXT);
 """
@@ -24,6 +24,10 @@ class Store:
         self.lock = threading.RLock()
         with self.lock:
             self.db.executescript(_SCHEMA)
+            try:  # databases created before approver identity existed
+                self.db.execute("ALTER TABLE approvals ADD COLUMN approved_by TEXT")
+            except sqlite3.OperationalError:
+                pass
 
     def q(self, sql: str, *a) -> list[sqlite3.Row]:
         with self.lock:
@@ -76,12 +80,12 @@ class Store:
         return r[0] if r else None
 
     # approvals
-    def add_approval(self, sid, tool, fp, decision, confirmed, policy_version, analysis_mode):
+    def add_approval(self, sid, tool, fp, decision, confirmed, policy_version, analysis_mode, approved_by=None):
         with self.lock:
             self.db.execute("UPDATE approvals SET status='superseded' WHERE server_id=? AND tool_name=? AND status IN('active','stale')", (sid, tool))
-            self.db.execute("INSERT INTO approvals(server_id,tool_name,fingerprint,decision,confirmed,approved_at,policy_version,analysis_mode,status) VALUES(?,?,?,?,?,?,?,?,?)",
+            self.db.execute("INSERT INTO approvals(server_id,tool_name,fingerprint,decision,confirmed,approved_at,policy_version,analysis_mode,status,approved_by) VALUES(?,?,?,?,?,?,?,?,?,?)",
                             (sid, tool, fp, decision, int(confirmed), time.time(), policy_version, analysis_mode,
-                             "active" if decision == "approved" else "denied"))
+                             "active" if decision == "approved" else "denied", approved_by))
             self.db.commit()
 
     def active_approval(self, sid: str, tool: str):

@@ -176,7 +176,7 @@ class Refused(Exception):
     pass
 
 
-def approve(ctx: Ctx, sid: str, name: str, confirm: bool = False) -> ToolTrustView:
+def approve(ctx: Ctx, sid: str, name: str, confirm: bool = False, by: str | None = None) -> ToolTrustView:
     v = view(ctx, sid, name)
     if v is None:
         raise Refused("unknown tool")
@@ -185,18 +185,18 @@ def approve(ctx: Ctx, sid: str, name: str, confirm: bool = False) -> ToolTrustVi
         raise Refused(f"not eligible: {','.join(e.reason_codes)}")
     if e.action == "review" and not confirm:
         raise Refused("confirmation required: " + ",".join(e.reason_codes))
-    ctx.store.add_approval(sid, name, v.current_fingerprint, "approved", confirm, POLICY_VERSION, v.analysis.mode)
+    ctx.store.add_approval(sid, name, v.current_fingerprint, "approved", confirm, POLICY_VERSION, v.analysis.mode, by)
     chain.append(ctx.store, "APPROVED", sid, name, cur_fp=v.current_fingerprint,
-                 reason=f"policy {POLICY_VERSION}; analysis {v.analysis.status}/{v.analysis.mode}")
+                 reason=f"policy {POLICY_VERSION}; analysis {v.analysis.status}/{v.analysis.mode}; by {by or 'unauthenticated'}")
     return view(ctx, sid, name)
 
 
-def deny(ctx: Ctx, sid: str, name: str) -> ToolTrustView:
+def deny(ctx: Ctx, sid: str, name: str, by: str | None = None) -> ToolTrustView:
     fp = ctx.store.current_fp(sid, name)
     if fp is None:
         raise Refused("unknown tool")
-    ctx.store.add_approval(sid, name, fp, "denied", False, POLICY_VERSION, "n/a")
-    chain.append(ctx.store, "DENIED", sid, name, cur_fp=fp)
+    ctx.store.add_approval(sid, name, fp, "denied", False, POLICY_VERSION, "n/a", by)
+    chain.append(ctx.store, "DENIED", sid, name, cur_fp=fp, reason=f"by {by or 'unauthenticated'}")
     return view(ctx, sid, name)
 
 

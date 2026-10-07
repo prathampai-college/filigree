@@ -1,8 +1,9 @@
 """stdio -> HTTP bridge so stdio-only MCP clients (Claude Desktop) can use the Filigree gateway.
 
-Usage: python scripts/stdio_bridge.py <server_id> [gateway_base]   (stdlib only, no install needed)
+Usage: python scripts/stdio_bridge.py <server_id> [gateway_base]   (stdlib only, no install needed; set FILIGREE_TOKEN if the backend uses FILIGREE_TOKENS)
 """
 import json
+import os
 import sys
 import urllib.request
 
@@ -13,7 +14,8 @@ for line in sys.stdin:
     if not line.strip():
         continue
     msg = json.loads(line)
-    req = urllib.request.Request(url, line.encode(), {"Content-Type": "application/json"})
+    req = urllib.request.Request(url, line.encode(), {"Content-Type": "application/json", **(
+        {"Authorization": f"Bearer {os.environ['FILIGREE_TOKEN']}"} if os.environ.get("FILIGREE_TOKEN") else {})})
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             body = r.read()

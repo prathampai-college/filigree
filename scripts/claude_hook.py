@@ -2,7 +2,7 @@
 
 The Claude Code MCP server name must equal the Filigree server id (or map it: FILIGREE_MAP="claudename=srv-id,...").
 Fails closed: backend down or server not registered = blocked. Set FILIGREE_HOOK_FAIL_OPEN=1 to allow instead.
-Stdlib only. Wire it in .claude/settings.json (see README).
+Set FILIGREE_TOKEN when the backend runs with FILIGREE_TOKENS. Stdlib only. Wire it in .claude/settings.json (see README).
 """
 import json
 import os
@@ -20,8 +20,8 @@ if not tool.startswith("mcp__"):
 server, _, name = tool[len("mcp__"):].partition("__")
 sid = dict(p.split("=", 1) for p in os.environ.get("FILIGREE_MAP", "").split(",") if "=" in p).get(server, server)
 body = json.dumps({"server_id": sid, "tool": name, "args": event.get("tool_input") or {}}).encode()
-req = urllib.request.Request(f"{os.environ.get('FILIGREE_URL', 'http://127.0.0.1:8000')}/api/check", body,
-                             {"Content-Type": "application/json"})
+headers = {"Content-Type": "application/json", **({"Authorization": f"Bearer {os.environ['FILIGREE_TOKEN']}"} if os.environ.get("FILIGREE_TOKEN") else {})}
+req = urllib.request.Request(f"{os.environ.get('FILIGREE_URL', 'http://127.0.0.1:8000')}/api/check", body, headers)
 try:
     with urllib.request.urlopen(req, timeout=20) as r:
         g = json.load(r)

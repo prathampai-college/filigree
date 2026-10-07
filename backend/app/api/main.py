@@ -1,9 +1,10 @@
 """FastAPI surface. REST for inspectability. Demo/playground endpoints exist only when FILIGREE_DEMO=1 (D-23)."""
+import hmac
 import json
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -69,6 +70,21 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
     app.state.ctx = ctx
     app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("FILIGREE_CORS", "http://localhost:5173,http://127.0.0.1:5173").split(","),
                        allow_methods=["*"], allow_headers=["*"])
+
+    tokens = {t: n for n, _, t in (p.partition(":") for p in os.environ.get("FILIGREE_TOKENS", "").split(",") if ":" in p)}
+
+    @app.middleware("http")
+    async def require_token(request: Request, call_next):
+        """FILIGREE_TOKENS="alice:tok1,bob:tok2": every state-changing call (POST) must carry a bearer token; reads stay open.
+        Unset = open (local demo). The token's owner is recorded as the approver."""
+        request.state.approver = None
+        if tokens and request.method == "POST" and request.url.path.startswith(("/api/", "/mcp/")):
+            sent = request.headers.get("authorization", "")[7:] if request.headers.get("authorization", "").lower().startswith("bearer ") else ""
+            who = next((n for t, n in tokens.items() if hmac.compare_digest(t, sent)), None)
+            if who is None:
+                return JSONResponse({"detail": "missing or invalid bearer token"}, status_code=401)
+            request.state.approver = who
+        return await call_next(request)
 
     def need_view(tid: str) -> ToolTrustView:
         sid, name = svc.split_id(tid)
@@ -153,18 +169,18 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
         return {"changes": out}
 
     @app.post("/api/tools/{tid}/approve", response_model=ToolTrustView)
-    def approve(tid: str, body: ApproveBody = ApproveBody()):
+    def approve(tid: str, request: Request, body: ApproveBody = ApproveBody()):
         sid, name = svc.split_id(tid)
         try:
-            return svc.approve(ctx, sid, name, body.confirm)
+            return svc.approve(ctx, sid, name, body.confirm, request.state.approver)
         except svc.Refused as e:
             raise HTTPException(409, str(e))
 
     @app.post("/api/tools/{tid}/deny", response_model=ToolTrustView)
-    def deny(tid: str):
+    def deny(tid: str, request: Request):
         sid, name = svc.split_id(tid)
         try:
-            return svc.deny(ctx, sid, name)
+            return svc.deny(ctx, sid, name, request.state.approver)
         except svc.Refused as e:
             raise HTTPException(404, str(e))
 
@@ -322,4 +338,7 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
 
 
 def build() -> FastAPI:  # uvicorn app.api.main:build --factory
+    if not os.environ.get("FILIGREE_TOKENS") and os.environ.get("FILIGREE_DEMO") != "1":
+        print("filigree: FILIGREE_TOKENS is not set, so anyone who can reach this port can approve tools. Set FILIGREE_TOKENS=name:token,...",
+              file=__import__("sys").stderr)
     return create_app(svc.Ctx.from_env())
