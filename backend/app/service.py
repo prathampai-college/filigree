@@ -13,6 +13,7 @@ from .audit import chain
 from .manifest.canonicalize import build_manifest, canonical_bytes, fingerprint
 from .manifest.diff import changed_fields
 from .manifest.display import escape_for_display, hidden_stats, human_rendering
+from .mcp import stdio
 from .mcp.client import McpClient
 from .policy.evaluate import eligibility, gate_decision, merge_findings, risk_of
 from .scanner.rules import scan, strings
@@ -65,7 +66,16 @@ def scan_for(ctx: Ctx, manifest: dict) -> list[Finding]:
 
 async def probe_cloaking(ctx: Ctx, sid: str, endpoint: str, tools: list[dict], instructions: str | None) -> None:
     """Ask again as a different client. A definition that differs by who is asking is marked cloaked (blocked)."""
-    other, other_ins = await ctx.client(endpoint, PROBE_IDENTITY).capture()
+    if stdio.is_stdio(endpoint):  # a second process per call is too slow: probe each stdio endpoint once, then drop the probe process
+        if endpoint in ctx.extra.setdefault("stdio_probed", set()):
+            return
+        ctx.extra["stdio_probed"].add(endpoint)
+        try:
+            other, other_ins = await ctx.client(endpoint, PROBE_IDENTITY).capture()
+        finally:
+            stdio.close(endpoint, PROBE_IDENTITY)
+    else:
+        other, other_ins = await ctx.client(endpoint, PROBE_IDENTITY).capture()
     theirs = {t.get("name"): build_manifest(t, sid, other_ins) for t in other}
     for t in tools:
         m = build_manifest(t, sid, instructions)

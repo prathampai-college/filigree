@@ -19,7 +19,8 @@ async def gate_call(ctx: svc.Ctx, sid: str, tool_name: str, args: dict, execute:
         srv = store.server(sid)
         if srv is None:
             raise CaptureError("unknown server")
-        tools, instructions = await ctx.client(srv["endpoint"]).capture()  # re-fetch NOW
+        client = ctx.client(srv["endpoint"])  # one client: a real server's session is initialized by capture and reused by the call
+        tools, instructions = await client.capture()  # re-fetch NOW
         await svc.probe_cloaking(ctx, sid, srv["endpoint"], tools, instructions)
         live = next((t for t in tools if t.get("name") == tool_name), None)
         if live is None:
@@ -57,7 +58,7 @@ async def gate_call(ctx: svc.Ctx, sid: str, tool_name: str, args: dict, execute:
     chain.append(store, "EXECUTION_ALLOWED", sid, tool_name, cur_fp=fp, reason=None if execute else "pre-check; client calls the server")
     if not execute:
         return {"allowed": True, "reason_codes": [], "changed_fields": [], "diff": [], "result": None}
-    result = await ctx.client(srv["endpoint"]).call_tool(tool_name, args)
+    result = await client.call_tool(tool_name, args)
     runtime.observe(ctx, result)
     flags = runtime.result_injection(result)
     if flags:  # the call ran; its output is not handed to the model
