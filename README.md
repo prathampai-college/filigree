@@ -2,7 +2,28 @@
 
 **What you approve is exactly what the agent sees.** An approval-integrity layer for MCP agent tools: the human-approved
 representation, the model-visible representation and the execution-bound representation must be the same object, checked at
-every call. Design docs live in [`docs/`](docs/) (PRD, DESIGN, TECH-STACK, REFINEMENTS, PLAN, pitch deck).
+every call. Design docs live in [`docs/`](docs/) (PRD, DESIGN, TECH-STACK, REFINEMENTS, PLAN, pitch deck), plus [`REAL-SERVERS`](docs/REAL-SERVERS.md), [`INDEPENDENT-EVAL`](docs/INDEPENDENT-EVAL.md), [`REAL-WORLD-SCAN`](docs/REAL-WORLD-SCAN.md) and the judge [`QA`](docs/QA.md).
+
+## Use it on your own MCP servers (2 minutes)
+
+```bash
+uv sync --project backend
+uv run --project backend filigree audit --yes        # scans every server in .mcp.json / Claude Desktop config; no tool is called
+```
+
+`filigree audit` finds your `.mcp.json` (or `claude_desktop_config.json`, or pass a path), starts each configured server just long
+enough to read its `tools/list`, runs the deterministic scanner and prints blocked / review / clean counts with the findings.
+Exit code 1 if any tool would be blocked. To enforce approval, put the gate in front of a server:
+
+```bash
+uv run --project backend filigree serve                                        # API + gateway on :8000 (UI: npm run dev in frontend/)
+uv run --project backend filigree run files -- npx -y @modelcontextprotocol/server-filesystem C:/work   # as a stdio command in claude_desktop_config.json
+```
+
+`serve` and `run` must use the same `FILIGREE_DB` file (default `filigree.db` in the working directory), which is how approvals made in the UI reach the stdio gateway. Only tools a human approved in the UI are offered, and every call is re-checked against the approved fingerprint. Works with stdio
+servers, HTTP servers and SSE replies; set `FILIGREE_TOKENS="alice:tok"` so only approvers can approve and the audit names them.
+Verified end to end on the official filesystem server with the official MCP SDK client (`scripts/real_gateway_check.py`, 7/7).
+Full guide and limits: [`docs/REAL-SERVERS.md`](docs/REAL-SERVERS.md).
 
 ## Run the demo (one command, fully offline)
 
@@ -97,7 +118,7 @@ stdio-only clients (Claude Desktop) use the stdlib bridge `scripts/stdio_bridge.
 ## Tests and evaluation
 
 ```bash
-cd backend && uv run pytest                                   # 58 tests: manifest, scanner, policy, gate, rug pull, failure drills, real-model agent, taint, result firewall, cloaking, lock, hook check, arena
+cd backend && uv run pytest                                   # 75 tests: manifest, scanner, policy, gate, rug pull, failure drills, real-model agent, taint, result firewall, cloaking, lock, hook check, arena, stdio/SSE upstreams, CLI, tokens
 python fixtures/evaluation/build_sets.py                      # (re)generate frozen sets; do not tune after freezing
 uv run --project backend python scripts/evaluate.py           # writes fixtures/evaluation/results.json
 ```
@@ -111,21 +132,25 @@ after seeing the v1 misses, so each set means something different:
 | v1 after tuning | **in-sample** (rules written from its misses) | 78.1% / 90.6% | 100% |
 | v2 (20+20) before tuning | unbiased | 45.0% / 50.0% | 65.0% |
 | v2 after tuning | **in-sample** (tuned after seeing v2 misses) | 95.0% / 100% | 100% |
-| **v3 (12+10), run once, not tuned** | **unseen** | **58.3% / 83.3%** | **90.0%** (false positive: "Silently queue notifications") |
+| v3 (12+10), run once, not tuned | was unseen; **seen** for the "silently" rule since 2026-10-07 | 58.3% / 83.3% (unchanged by the 2026-10-07 rules) | 90.0% (false positive: "Silently queue notifications") |
+| **v4 (12+12), written and frozen before the 2026-10-07 rule change** | **unseen** (baseline, old rules) | **66.7% / 75.0%** | 66.7%; **25% of benign tools blocked** (3: "succeeds silently" style). After the change: same recall, **0% blocked**, in-sample now |
+| **MCPTox, independent** (485 real poisoned tool descriptions, 362 clean) | **independent, scanner only, run once** | **14.8% blocked**, 77.5% flagged beyond cross-tool refs (99.2% counting that medium rule) | 86.5%; 1.4% blocked, 12.2% review. See [`docs/INDEPENDENT-EVAL.md`](docs/INDEPENDENT-EVAL.md) |
+| 52 real tools from 7 official servers (assumed benign) | in-sample for the two 2026-10-07 fixes | n/a | 71.2% -> **96.2%**; blocked 1.9% -> 0% |
 
-Read v3 as the honest number: roughly 6 in 10 poisoned tools blocked outright and 8 in 10 flagged for review, on team-authored
-samples. Rug-pull drift detection is 100% (5/5) with 0/15 false drift; scanner latency p50 0.08 ms. Raw files:
+Read the unseen and independent rows as the honest numbers. On team-authored samples roughly 6 to 7 in 10 poisoned tools are
+blocked outright; on MCPTox, written by other people to look like ordinary tool text, the scanner alone blocks about 1 in 7, and
+the model stage plus human review carry the rest (the LLM-sample result is in `docs/INDEPENDENT-EVAL.md`). Rug-pull drift detection is 100% (5/5) with 0/15 false drift; scanner latency p50 0.08 ms. Raw files:
 `fixtures/evaluation/results*.json` (`results_v1_pretuning.json` keeps the original numbers). The 12 "public" samples are
 **illustrative**: modeled on published attack classes, not quoted from them (checked 2026-10-06, see `fixtures/evaluation/SOURCES.md`; one cited link is dead).
 
-Real-world check: the scanner was run on 52 tool definitions from 7 official MCP servers ([`docs/REAL-WORLD-SCAN.md`](docs/REAL-WORLD-SCAN.md)). None are poisoned; the scanner raised one **blocking false positive** ("succeed silently" in `create_directory`) and 14 review-level ones, and the scan exposed a real `$schema` bug that is now fixed (0 changes on the 109 frozen samples).
+Real-world check: the scanner was run on 52 tool definitions from 7 official MCP servers ([`docs/REAL-WORLD-SCAN.md`](docs/REAL-WORLD-SCAN.md)). None are poisoned. The first run raised one **blocking false positive** ("succeed silently" in `create_directory`) and 14 review-level ones and exposed a `$schema` bug; both were fixed, the fixes were measured on a new frozen set written first (v4), and the 52 tools are now a frozen false-positive regression set (`fixtures/evaluation/real_benign.json`).
 
 Remaining known misses: paraphrases without a known path or verb ("private configuration directory"), cross-field references,
 "keychain"-style paths on other OSes, non-English concealment. Those are for the advisory LLM stage and human review.
 
 ## Architecture in one paragraph
 
-`capture` (raw JSON-RPC over HTTP, no SDK normalization) → `manifest` (canonical JSON, strings verbatim, SHA-256 over server id +
+`capture` (raw JSON-RPC over HTTP with JSON or SSE replies, or over stdio; no SDK normalization) → `manifest` (canonical JSON, strings verbatim, SHA-256 over server id +
 server instructions + tool definition) → `scanner` (deterministic, cannot be downgraded) → `analyzer` (advisory, tool text framed as
 untrusted data, schema-validated, failure = REVIEW) → `policy` → human approval → `gate` (re-fetches `tools/list` and re-hashes
 before **every** `tools/call`; any capture/DB failure blocks). Audit events form a hash chain: the Audit page can verify it, export it as JSON, and (in demo mode) tamper with one row to show the break and which event it is. The reference agent registry is
@@ -133,7 +158,7 @@ built only from the canonical manifest of currently-valid approvals.
 
 ## Not protected (state this plainly)
 
-Malicious server behavior with an unchanged definition (partially: taint blocks known secrets flowing into it) · instructions
+Anyone who can reach the port when `FILIGREE_TOKENS` is not set (the local demo is open; tokens are shared secrets, no TLS, reads stay open) · resources and prompts (the gateway proxies tools only) · image/resource tool results (not inspected) · server-initiated messages · a stdio server that cloaks after the one probe at discovery · detection of MCPTox-style poisonings by the scanner alone (14.8% blocked) · malicious server behavior with an unchanged definition (partially: taint blocks known secrets flowing into it) · instructions
 inside tool *results* (partially: heuristic result firewall) · secrets the model re-encodes before sending · clients that
 bypass both the gateway and the hook · a server that cloaks by IP or timing rather than client identity · the race between
 the gate's re-fetch and the call · subtle semantic injections the scanner misses and the analyzer also misses.
