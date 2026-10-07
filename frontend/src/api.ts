@@ -1,7 +1,12 @@
 import type { ToolTrustView } from './types'
 
+// Approver token (backend FILIGREE_TOKENS). Kept in localStorage only as a per-browser convenience; everything works without it.
+export const getToken = () => { try { return localStorage.getItem('filigree_token') ?? '' } catch { return '' } }
+export const setToken = (t: string) => { try { localStorage.setItem('filigree_token', t) } catch { /* private window: token lives for this page only */ } }
+
 async function j<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...init })
+  const token = getToken()
+  const r = await fetch(path, { headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...init })
   if (!r.ok) throw new Error((await r.json().catch(() => ({ detail: r.statusText }))).detail ?? r.statusText)
   return r.json()
 }
