@@ -2,7 +2,7 @@
 
 **What you approve is exactly what the agent sees.** An approval-integrity layer for MCP agent tools: the human-approved
 representation, the model-visible representation and the execution-bound representation must be the same object, checked at
-every call. Design docs live in [`docs/`](docs/) (PRD, DESIGN, TECH-STACK, REFINEMENTS, PLAN, pitch deck), plus [`REAL-SERVERS`](docs/REAL-SERVERS.md), [`INDEPENDENT-EVAL`](docs/INDEPENDENT-EVAL.md), [`REAL-WORLD-SCAN`](docs/REAL-WORLD-SCAN.md) and the judge [`QA`](docs/QA.md).
+every call. **All measured results, with their files and how far to trust each: [`docs/RESULTS.md`](docs/RESULTS.md).** Design docs live in [`docs/`](docs/) (PRD, DESIGN, TECH-STACK, REFINEMENTS, PLAN, pitch deck), plus [`REAL-SERVERS`](docs/REAL-SERVERS.md), [`INDEPENDENT-EVAL`](docs/INDEPENDENT-EVAL.md), [`REAL-WORLD-SCAN`](docs/REAL-WORLD-SCAN.md) and the judge [`QA`](docs/QA.md).
 
 ## Use it on your own MCP servers (2 minutes)
 
@@ -121,7 +121,10 @@ stdio-only clients (Claude Desktop) use the stdlib bridge `scripts/stdio_bridge.
 cd backend && uv run pytest                                   # 78 tests: manifest, scanner, policy, gate, rug pull, failure drills, real-model agent, taint, result firewall, cloaking, lock, hook check, arena, stdio/SSE upstreams, CLI, tokens
 python fixtures/evaluation/build_sets.py                      # (re)generate frozen sets; do not tune after freezing
 uv run --project backend python scripts/evaluate.py           # writes fixtures/evaluation/results.json
+uv run --project backend python scripts/check_results.py      # every committed number still reproduces (also in CI)
 ```
+
+One page with every number, its file, rerun command and status: [`docs/RESULTS.md`](docs/RESULTS.md).
 
 Measured. The table below is scanner only. **Live LLM run** (Groq `openai/gpt-oss-120b`, 47 v1 samples, 0 failed calls, p50 5.9 s / p95 8.6 s): LLM-only 100% blocked and 100% flagged, 100% benign accepted; combined with the scanner the same. These are the team's own samples and the model was shown the scanner findings in its prompt, so read them as an upper bound; On the unseen v3 set (22 samples, run once, 0 failed calls) LLM-only and combined both reached 100% blocked / 100% flagged, but accepted only 80% of benign tools (false positives: `read_config` with a `path` parameter and the "Silently queue notifications" decoy), versus 90% for the scanner alone. Rules were changed once,
 after seeing the v1 misses, so each set means something different:
