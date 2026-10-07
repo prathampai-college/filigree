@@ -110,7 +110,7 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
 
     @app.get("/api/servers")
     def servers():
-        return [dict(r) for r in ctx.store.servers()]
+        return [{**dict(r), "endpoint": stdio.redact(r["endpoint"])} for r in ctx.store.servers()]  # never echo env values
 
     @app.post("/api/servers")
     async def add_server(body: ServerBody):

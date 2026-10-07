@@ -122,3 +122,26 @@ async def test_gateway_passes_structured_content_through(tmp_path):  # found by 
         svc.approve(ctx, "s", "read", confirm=True)
         r = await handle(ctx, "s", {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "read", "arguments": {}}})
         assert r["result"]["structuredContent"] == structured and not r["result"]["isError"]
+
+
+def test_secrets_in_a_stdio_env_never_reach_the_lock_or_the_server_list():
+    ep = stdio.endpoint_for(["npx", "x"], {"API_TOKEN": "s3cret-value"})
+    assert "s3cret-value" not in stdio.redact(ep) and "${API_TOKEN}" in stdio.redact(ep)
+    import os
+    os.environ["API_TOKEN"] = "from-env"
+    try:
+        assert json.loads(stdio.expand(stdio.redact(ep))[len(stdio.PREFIX):])["env"] == {"API_TOKEN": "from-env"}
+    finally:
+        del os.environ["API_TOKEN"]
+
+
+async def test_lock_and_server_list_redact_stdio_env(stdio_ctx):
+    from app import lock
+    ctx, desc, endpoint = stdio_ctx
+    ctx.store.upsert_server("srv-echo", "echo", stdio.endpoint_for([sys.executable, ECHO], {"STDIO_DESC_FILE": str(desc), "SECRET_NOTE": "hunter2"}))
+    await svc.discover(ctx, "srv-echo")
+    svc.approve(ctx, "srv-echo", "echo", confirm=True)
+    exported = json.dumps(lock.export(ctx))
+    assert "hunter2" not in exported and "${SECRET_NOTE}" in exported
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(ctx)), base_url="http://api") as api:
+        assert "hunter2" not in (await api.get("/api/servers")).text

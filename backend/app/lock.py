@@ -7,6 +7,7 @@ import httpx
 
 from .manifest.canonicalize import build_manifest, fingerprint
 from .manifest.diff import diff_manifests
+from .mcp import stdio
 from .mcp.client import McpClient
 
 LOCK_VERSION = 1
@@ -18,7 +19,7 @@ def export(ctx) -> dict:
         sid, name = r["server_id"], r["tool_name"]
         appr = ctx.store.active_approval(sid, name)
         if appr and appr["status"] == "active":
-            tools[f"{sid}:{name}"] = {"endpoint": ctx.store.server(sid)["endpoint"], "fingerprint": appr["fingerprint"],
+            tools[f"{sid}:{name}"] = {"endpoint": stdio.redact(ctx.store.server(sid)["endpoint"]), "fingerprint": appr["fingerprint"],
                                       "manifest": ctx.store.manifest(appr["fingerprint"])}
     return {"lock_version": LOCK_VERSION, "tools": dict(sorted(tools.items()))}
 
@@ -30,7 +31,7 @@ async def verify(lock: dict, http: httpx.AsyncClient) -> list[str]:
         sid, _, name = key.partition(":")
         try:
             if pin["endpoint"] not in cache:
-                cache[pin["endpoint"]] = await McpClient(http, pin["endpoint"]).capture()
+                cache[pin["endpoint"]] = await McpClient(http, stdio.expand(pin["endpoint"])).capture()
             tools, ins = cache[pin["endpoint"]]
         except Exception as e:  # unreachable server = not verified
             problems.append(f"{key}: CAPTURE_FAILURE {e}")

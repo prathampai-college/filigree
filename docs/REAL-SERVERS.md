@@ -90,6 +90,13 @@ Approval is the security boundary, and until now anyone who could reach port 800
   expiry or revocation short of restarting, and `GET /api/*` is readable by anyone who can reach the port.
 Tests: `test_integration.py::test_tokens_protect_writes_and_name_the_approver`, `test_old_database_without_approver_column_is_migrated`.
 
+## Secrets in the lockfile and the API
+A stdio server entry can carry an `env` block with credentials. Env **values** are never exported: `filigree.lock` and
+`GET /api/servers` show `${NAME}` instead, and `filigree verify` reads the value from the verifying machine's environment (an unset
+variable becomes an empty string, so a server that needs it will fail to start and be reported as not verified). The command's
+**arguments are stored as written**, so do not put secrets in arguments (`--token abc`); pass them through `env`.
+Tests: `test_upstream.py::test_secrets_in_a_stdio_env_never_reach_the_lock_or_the_server_list`, `test_lock_and_server_list_redact_stdio_env`.
+
 ## Verified end to end on a real server
 `scripts/real_gateway_check.py` runs the **official filesystem server** behind `filigree run`, driven by the **official MCP Python
 SDK client** over stdio: nothing is offered before approval; after a human approves `read_text_file` and `list_directory` only

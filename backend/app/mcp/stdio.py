@@ -27,6 +27,24 @@ def endpoint_for(argv: list[str], env: dict | None = None, clean_env: bool = Fal
     return PREFIX + json.dumps({"argv": argv, "env": env or {}, **({"clean_env": True} if clean_env else {})}, sort_keys=True)
 
 
+def redact(endpoint: str) -> str:
+    """The endpoint with env VALUES replaced by ${NAME}, safe to show in an API response or commit in filigree.lock."""
+    if not is_stdio(endpoint):
+        return endpoint
+    spec = json.loads(endpoint[len(PREFIX):])
+    spec["env"] = {k: "${" + k + "}" for k in spec.get("env", {})}
+    return PREFIX + json.dumps(spec, sort_keys=True)
+
+
+def expand(endpoint: str) -> str:
+    """Inverse of redact(): ${NAME} values are read from the current environment (a lockfile verify on another machine)."""
+    if not is_stdio(endpoint):
+        return endpoint
+    spec = json.loads(endpoint[len(PREFIX):])
+    spec["env"] = {k: os.environ.get(v[2:-1], "") if v.startswith("${") and v.endswith("}") else v for k, v in spec.get("env", {}).items()}
+    return PREFIX + json.dumps(spec, sort_keys=True)
+
+
 def is_stdio(endpoint: str) -> bool:
     return endpoint.startswith(PREFIX)
 
