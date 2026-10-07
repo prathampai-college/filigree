@@ -118,7 +118,7 @@ stdio-only clients (Claude Desktop) use the stdlib bridge `scripts/stdio_bridge.
 ## Tests and evaluation
 
 ```bash
-cd backend && uv run pytest                                   # 75 tests: manifest, scanner, policy, gate, rug pull, failure drills, real-model agent, taint, result firewall, cloaking, lock, hook check, arena, stdio/SSE upstreams, CLI, tokens
+cd backend && uv run pytest                                   # 78 tests: manifest, scanner, policy, gate, rug pull, failure drills, real-model agent, taint, result firewall, cloaking, lock, hook check, arena, stdio/SSE upstreams, CLI, tokens
 python fixtures/evaluation/build_sets.py                      # (re)generate frozen sets; do not tune after freezing
 uv run --project backend python scripts/evaluate.py           # writes fixtures/evaluation/results.json
 ```
