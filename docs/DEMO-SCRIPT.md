@@ -5,24 +5,28 @@ Start: `powershell -File scripts/demo.ps1` (or `sh scripts/demo.sh`), open http:
 | Time | Screen | Do | Say |
 |---|---|---|---|
 | 0:00 | Demo | Connect **Poisoned**; agent selector = **Real model**; click **1 · Run WITHOUT Filigree** | "A tool description is text the model obeys. This one tells the model to read ~/.env and send it out. These are real recorded model runs: gpt-oss-120b leaked the fake secret in 6 of 10 runs, qwen in 5 of 10. One leak is enough." |
-| 0:40 | Demo | Click **2 · Run WITH Filigree** | "Same server, same task. The tool has no valid approval, so it is never offered to the model. There is nothing to obey." |
-| 1:00 | Tools | Connect **Invisible-text**; open the tool; toggle "Highlight what the scanner flagged" | "This description looks identical to the benign one. Underneath is hidden text. The reviewer sees it decoded, and approval is blocked." |
-| 1:40 | Demo | Connect **Rug pull**, approve `fetch_report` on Tools, then click **Run gateway session** | "Now a real MCP session through our gateway. The tool is clean when approved, the server changes it later, and the very next call is blocked with MANIFEST_DRIFT. The client sees no tool." |
-| 2:20 | Audit | Click **Tamper (demo)**, then **Verify chain** | "Every decision is in a hash chain. Edit one row behind our back and the chain breaks at that event." |
-| 2:40 | Evaluation | Point at the unseen-set card | "On a set we wrote after tuning and ran once: scanner alone flagged 83%, blocked 58%. With the LLM, 100% of poisoned and 80% of benign accepted. Team-authored, so not an independent benchmark." |
+| 0:35 | Demo | Click **2 · Run WITH Filigree** | "Same server, same task. The tool has no valid approval, so it is never offered to the model. There is nothing to obey." |
+| 0:55 | Tools | Connect **Invisible-text**; open the tool; toggle "Highlight what the scanner flagged" | "Identical to the benign one on screen. Underneath is hidden text. The reviewer sees it decoded, and approval is blocked." |
+| 1:20 | Demo | Connect **Rug pull**, approve `fetch_report` on Tools, **Run gateway session** | "A real MCP session through our gateway. Clean when approved, the server changes it later, the next call is blocked with MANIFEST_DRIFT. The client sees no tool." |
+| 1:50 | Demo | Connect **Result injection**; run `fetch_notes` WITHOUT, then WITH | "Approval is not enough: this tool is clean, but its result carries an instruction. The result firewall catches the obvious one; for the subtle one, data-flow taint blocks the secret from leaving in the next call. A model that ignores description poison, gpt-oss-20b, followed result injection in 5 of 5 and 3 of 5 recorded runs." |
+| 2:20 | Terminal | Show the saved output of `scripts/real_gateway_check.py` (or run it) | "And it is not only our fixtures. The official filesystem server, behind `filigree run`, driven by the official MCP SDK client: nothing offered before approval, only approved tools listed, an unapproved write blocked and never reaches the server. 7 of 7 checks." |
+| 2:40 | Evaluation | Unseen-set card, then say the MCPTox line | "Honest numbers. On a set we wrote after tuning, run once: 58% blocked, 83% flagged. On MCPTox, an independent benchmark of real poisonings, the scanner alone blocks 14.8% and flags 77.5% for a real reason. The model stage and human review carry the rest, and enforcement at the call does not depend on detection." |
 | 2:55 | any | | "The approved text, the model-visible text and the executed text are the same object, checked on every call." |
+
+Optional, if there are questions or extra time (not in the 3 minutes): **Audit** page: **Tamper (demo)**, **Verify chain**; **Download filigree.lock** and `filigree verify`; **Cloaking** scene; the Playground red-team arena (needs a live key); `filigree audit` on your own `.mcp.json`.
 
 ## If something breaks
 - Backend not up: re-run the demo script; `backend/demo.db` resets on start.
 - Weird state: **Reset** on the Demo page, reconnect the scenario.
 - Model scene fails to show: switch the selector back to **Scripted agent**; the story is the same.
 - Last resort: play the backup video (record it in replay mode beforehand).
+- Terminal scene fails (no npx or network): show `docs/REAL-SERVERS.md` section "Verified end to end on a real server" instead; do not claim a live run.
 
 ## Deck outline
 1. The attack: invisible text + the model obeying it (screenshot of the Real-model run).
 2. The gap: approval, model-visible text and execution are three different objects today.
 3. Filigree: fingerprint, scanner + advisory LLM, human approval, gate on every call.
 4. Live demo.
-5. Numbers: unseen v3 only, plus the 6/10 and 5/10 recorded model runs. Cite CyberArk's "Poison everywhere" by title, not link; call the public samples "modeled on published attack classes".
-6. Honest limits: team-authored sets, cloaking servers, tool results, race window, no auth.
+5. Numbers: unseen v3 and the independent MCPTox run (14.8% blocked, 77.5% flagged beyond cross-tool refs; N=485 + 362), plus the recorded model runs (6/10, 5/10 description poison; 5/5, 3/5 result injection). Cite CyberArk's "Poison everywhere" by title, not link; call the public samples "modeled on published attack classes".
+6. Honest limits: team-authored sets, one independent benchmark, cloaking by IP or timing, subtle tool results, race window, shared-secret tokens.
 7. Next steps and ask.
