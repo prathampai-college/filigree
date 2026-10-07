@@ -56,3 +56,4 @@ desktop.ini
 # Claude Code local state (the shared launch.json stays tracked)
 .claude/*
 !.claude/launch.json
+fixtures/external/
