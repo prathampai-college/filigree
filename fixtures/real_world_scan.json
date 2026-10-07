@@ -48,7 +48,7 @@
     "findings": [
      {
       "category": "concealment_instruction",
-      "severity": "high",
+      "severity": "medium",
       "evidence": "tool.description: concealment: silently"
      }
     ]
@@ -167,326 +167,74 @@
   "tools": [
    {
     "tool": "echo",
-    "fingerprint": "sha256:0c057a7c0e76db1f0ea8880fc30108401033cd273e311ff6dfdc23007c23a709",
-    "findings": [
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-subscriber-updates"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool gzip-file-as-resource"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool trigger-long-running-operation"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-simulated-logging"
-     }
-    ]
+    "fingerprint": "sha256:a1615460b7fe5e497ad31748fadc124607759b62bb50235286288549b4f495da",
+    "findings": []
    },
    {
     "tool": "get-annotated-message",
-    "fingerprint": "sha256:1848150dd2b795325fb94c2c8231468bd7d7aafc94774d90548d98ab33809764",
-    "findings": [
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-subscriber-updates"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool gzip-file-as-resource"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool trigger-long-running-operation"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-simulated-logging"
-     }
-    ]
+    "fingerprint": "sha256:f4a134b43770bca6defe805d85bc82290e7beb22ef2534a93b6d9bdee54aa5ca",
+    "findings": []
    },
    {
     "tool": "get-env",
-    "fingerprint": "sha256:ab52ab6a2aa5ede78ec83dd21abfcc90ff216d0ea9fd00d92ee5ff8f7fa3b63e",
-    "findings": [
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-subscriber-updates"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool gzip-file-as-resource"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool trigger-long-running-operation"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-simulated-logging"
-     }
-    ]
+    "fingerprint": "sha256:e275899e45dfe9ad46574f6564b14fa36a8ffb6fcb544c8fec6b8d8f245e830a",
+    "findings": []
    },
    {
     "tool": "get-resource-links",
-    "fingerprint": "sha256:8c6f2e30fc18f7a39b841ae7dc0039b5cfa04a58212d6937264e347030fb4390",
-    "findings": [
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-subscriber-updates"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool gzip-file-as-resource"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool trigger-long-running-operation"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-simulated-logging"
-     }
-    ]
+    "fingerprint": "sha256:1c0f35ac0af20becc6200b625ecc051095580d89e01134b1395023635de1d6dc",
+    "findings": []
    },
    {
     "tool": "get-resource-reference",
-    "fingerprint": "sha256:0993d1d5d36a08ce50b92fbedc7440db987522260f24d5bbff0c6400b3f50098",
-    "findings": [
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-subscriber-updates"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool gzip-file-as-resource"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool trigger-long-running-operation"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-simulated-logging"
-     }
-    ]
+    "fingerprint": "sha256:98c48430136b13add107fcbb2224f37f78b8e9705a7ba6985384d7ebd41665ab",
+    "findings": []
    },
    {
     "tool": "get-structured-content",
-    "fingerprint": "sha256:77ba083e543c69be9046e36031f0786095477dc636ddd87b96595f4931c9decf",
-    "findings": [
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-subscriber-updates"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool gzip-file-as-resource"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool trigger-long-running-operation"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-simulated-logging"
-     }
-    ]
+    "fingerprint": "sha256:cfa8a7b60ff6c82ff62bad391a9d22c65fe3129cad65089939cd4231b76b224a",
+    "findings": []
    },
    {
     "tool": "get-sum",
-    "fingerprint": "sha256:6636491b0467101d86e035dd9685d7d0d58ef47c3f577d871ce1b1916eb3d4e2",
-    "findings": [
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-subscriber-updates"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool gzip-file-as-resource"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool trigger-long-running-operation"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-simulated-logging"
-     }
-    ]
+    "fingerprint": "sha256:83490fcde383f8f5026f2959d8ae309d8abaad084e31ffafb2b37e0bec3153b5",
+    "findings": []
    },
    {
     "tool": "get-tiny-image",
-    "fingerprint": "sha256:6410986ba767f5fce3b2ca3ba796d5a87655d2d0820b6649716943777880210f",
-    "findings": [
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-subscriber-updates"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool gzip-file-as-resource"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool trigger-long-running-operation"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-simulated-logging"
-     }
-    ]
+    "fingerprint": "sha256:0b368716b8838dc6160e77dc0c88d23ee025bb346497af08969fc14d66081232",
+    "findings": []
    },
    {
     "tool": "gzip-file-as-resource",
-    "fingerprint": "sha256:9b024855b49c4e60944dd867e9fb41967d3c19b7a9e208325c32b4cd274707e4",
+    "fingerprint": "sha256:80cb078cd809ce50f82233533812983b619c7cec62e1d8154f718a6ea4012f17",
     "findings": [
      {
       "category": "external_exfiltration",
       "severity": "low",
       "evidence": "tool.inputSchema.properties.data.default: destination https://raw.githubusercontent.com/modelcontextprotocol/servers/refs/heads/main/README.md"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-subscriber-updates"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool trigger-long-running-operation"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-simulated-logging"
      }
     ]
    },
    {
     "tool": "toggle-simulated-logging",
-    "fingerprint": "sha256:6d41ab391cbf5e002408aa1f9a53232a7a8bce282f8a2c40cbcb424ba83c211a",
-    "findings": [
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-subscriber-updates"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool gzip-file-as-resource"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool trigger-long-running-operation"
-     }
-    ]
+    "fingerprint": "sha256:cdda14bbcacf61279e2a1a3472851e62c65f78ad60493f563fbba93766e66a7a",
+    "findings": []
    },
    {
     "tool": "toggle-subscriber-updates",
-    "fingerprint": "sha256:185228eb5d02cc3c6ac1153a5ff28f4cbf70600d7639a13b7e333bdb9d1856e0",
-    "findings": [
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool gzip-file-as-resource"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool trigger-long-running-operation"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-simulated-logging"
-     }
-    ]
+    "fingerprint": "sha256:00772e9ace1b9bf08bdf442eead0825e6ffb02ef097b59330ca02136361a6498",
+    "findings": []
    },
    {
     "tool": "trigger-long-running-operation",
-    "fingerprint": "sha256:f7882934fe7f57b0d2f533c6a83b9c5e9d31e38533e79898b5e1af2fb04a727c",
-    "findings": [
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-subscriber-updates"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool gzip-file-as-resource"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-simulated-logging"
-     }
-    ]
+    "fingerprint": "sha256:d00f2ee134fb72529aad71f355e72c7734208488319296308e30c86a924ad0fa",
+    "findings": []
    },
    {
     "tool": "simulate-research-query",
-    "fingerprint": "sha256:4eb4d3bc35833990373cd6471f119ddaa68a41663c10d56f72c7b6f6f865498d",
-    "findings": [
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-subscriber-updates"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool gzip-file-as-resource"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool trigger-long-running-operation"
-     },
-     {
-      "category": "cross_tool_instruction",
-      "severity": "medium",
-      "evidence": "server_instructions: references tool toggle-simulated-logging"
-     }
-    ]
+    "fingerprint": "sha256:22e8b638b1a61cf24977b74dfbc4af76ad3e9d6163896d3b825a90d5bbffda4e",
+    "findings": []
    }
   ]
  },

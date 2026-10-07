@@ -1,0 +1,18 @@
+{
+ "corpus": "real_benign.json",
+ "label": "after_rules",
+ "set_frozen_intact": true,
+ "poisoned": 0,
+ "benign": 52,
+ "recall_blocked_pct": null,
+ "recall_flagged_pct": null,
+ "benign_acceptance_pct": 96.2,
+ "benign_blocked_pct": 0.0,
+ "missed": [],
+ "not_blocked": [],
+ "blocked_false_positives": [],
+ "review_false_positives": [
+  "filesystem/read_file",
+  "filesystem/create_directory"
+ ]
+}

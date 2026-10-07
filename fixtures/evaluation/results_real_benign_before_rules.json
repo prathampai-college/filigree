@@ -1,0 +1,32 @@
+{
+ "corpus": "real_benign.json",
+ "label": "before_rules",
+ "set_frozen_intact": true,
+ "poisoned": 0,
+ "benign": 52,
+ "recall_blocked_pct": null,
+ "recall_flagged_pct": null,
+ "benign_acceptance_pct": 71.2,
+ "benign_blocked_pct": 1.9,
+ "missed": [],
+ "not_blocked": [],
+ "blocked_false_positives": [
+  "filesystem/create_directory"
+ ],
+ "review_false_positives": [
+  "filesystem/read_file",
+  "everything/echo",
+  "everything/get-annotated-message",
+  "everything/get-env",
+  "everything/get-resource-links",
+  "everything/get-resource-reference",
+  "everything/get-structured-content",
+  "everything/get-sum",
+  "everything/get-tiny-image",
+  "everything/gzip-file-as-resource",
+  "everything/toggle-simulated-logging",
+  "everything/toggle-subscriber-updates",
+  "everything/trigger-long-running-operation",
+  "everything/simulate-research-query"
+ ]
+}
