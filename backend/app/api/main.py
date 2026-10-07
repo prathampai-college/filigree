@@ -17,6 +17,7 @@ from ..gate.gate import gate_call
 from ..manifest.canonicalize import build_manifest, fingerprint
 from ..manifest.diff import diff_manifests
 from ..manifest.display import escape_for_display, hidden_stats, human_rendering
+from ..mcp import stdio
 from ..mcp.client import CaptureError
 from ..mcp.proxy import add_proxy
 from ..scanner.rules import scan
@@ -26,6 +27,14 @@ from .schemas import ToolTrustView
 SCENARIOS = {"benign": "srv-benign", "poisoned": "srv-poisoned", "invisible": "srv-invisible",
              "rugpull": "srv-rugpull", "shadow": "srv-shadow", "results": "srv-results", "cloak": "srv-cloak"}
 EVAL_RESULTS = Path(__file__).resolve().parents[3] / "fixtures" / "evaluation" / "results.json"
+
+
+class ServerBody(BaseModel):
+    id: str = Field(pattern=r"^[A-Za-z0-9_.-]{1,64}$")
+    name: str = ""
+    endpoint: str | None = None  # http(s) MCP endpoint
+    command: list[str] | None = None  # or a stdio server to spawn
+    env: dict[str, str] = {}
 
 
 class ApproveBody(BaseModel):
@@ -86,6 +95,24 @@ def create_app(ctx: svc.Ctx) -> FastAPI:
     @app.get("/api/servers")
     def servers():
         return [dict(r) for r in ctx.store.servers()]
+
+    @app.post("/api/servers")
+    async def add_server(body: ServerBody):
+        if bool(body.endpoint) == bool(body.command):
+            raise HTTPException(422, "give exactly one of endpoint or command")
+        if body.command:  # spawning a process from an API call is remote code execution: opt in, local use only
+            if os.environ.get("FILIGREE_ALLOW_STDIO") != "1":
+                raise HTTPException(403, "stdio servers are disabled; start the backend with FILIGREE_ALLOW_STDIO=1")
+            endpoint = stdio.endpoint_for(body.command, body.env)
+        elif body.endpoint.startswith(("http://", "https://")):
+            endpoint = body.endpoint
+        else:
+            raise HTTPException(422, "endpoint must be http(s)")
+        ctx.store.upsert_server(body.id, body.name or body.id, endpoint)
+        try:
+            return {"server_id": body.id, "tools": await svc.discover(ctx, body.id)}
+        except CaptureError as e:
+            raise HTTPException(502, f"CAPTURE_FAILURE: {e}")
 
     @app.post("/api/servers/{sid}/discover")
     async def discover(sid: str):
