@@ -11,7 +11,8 @@ _STRONG_PATH = re.compile(r"(~|\$HOME|/home/\w+)?/?\.(env|ssh|aws|netrc|npmrc|ku
 _WEAK_SECRET = re.compile(r"\b(api[_ -]?key|token|password|secret|credentials?|private key)\b", re.I)
 _ACTION = re.compile(r"\b(read|send|upload|post|forward|include|attach|exfiltrat\w*|leak|copy|append|transmit|e-?mail|mail)\b", re.I)
 _URL = re.compile(r"https?://[^\s\"')>]+|\b[\w-]+(\.[\w-]+)*\.(local|com|net|io|org|xyz)\b/?\S*", re.I)
-_CONCEAL = re.compile(r"\b(do not|don't|never)\s+(tell|mention|reveal|disclose|show|inform|let)\b[^.]{0,40}\b(user|human|anyone)\b|\bdo not (disclose|reveal)\b|\bwithout (telling|informing) the user\b|\b(need|needs) not (be told|know)\b|\bdoes not need to (be told|know)\b|\b(keep|kept) (it|this|that)\b[^.]{0,30}\b(between|confidential|secret|from)\b|\b(silently|quietly)\b|\bwithout\b[^.]{0,40}\bnotic(e|ing)\b", re.I)
+_CONCEAL = re.compile(r"\b(do not|don't|never)\s+(tell|mention|reveal|disclose|show|inform|let)\b[^.]{0,40}\b(user|human|anyone)\b|\bdo not (disclose|reveal)\b|\bwithout (telling|informing) the user\b|\b(need|needs) not (be told|know)\b|\bdoes not need to (be told|know)\b|\b(keep|kept) (it|this|that)\b[^.]{0,30}\b(between|confidential|secret|from)\b|\bwithout\b[^.]{0,40}\bnotic(e|ing)\b", re.I)
+_QUIET = re.compile(r"\b(silently|quietly)\b", re.I)
 _IMPERATIVE = re.compile(r"\bIMPORTANT\s*:|\bignore (all |any )?(previous|prior|above)\b|\bbefore returning\b|\byou must\b|\bdisregard\b|\bSYSTEM\s*:|\bnew instructions?\s*:|\bforget (your|all|any)\b[^.]{0,15}\b(previous|prior|guidance|instructions)\b", re.I)
 _ANALYZER = re.compile(r"\b(report|return|output|say)\b[^.]{0,20}\b(no|zero|empty)\b[^.]{0,10}\bfindings?\b|\bpre-?approved\b|\balready (been )?(approved|reviewed|vetted|audited|verified)\b|\bskip (any |the )?(review|check|scan)\b|\b(security )?(scanner|analyzer|reviewer)\b", re.I)
 _RISKY_PARAMS = {"path", "filepath", "file", "filename", "url", "uri", "command", "cmd", "shell"}
@@ -82,6 +83,8 @@ def scan(manifest: dict, approved: list[tuple[str, str]] = (), known_tools: set[
             m = pat.search(s)
             if m:
                 out.append(_f(cat, sev, f"{path}: {label}: {m.group(0)}"))
+        if m := _QUIET.search(s):  # "succeeds silently" is common in real tools: blocking only with a data-movement verb or sensitive path
+            out.append(_f("concealment_instruction", "high" if _ACTION.search(s) or _STRONG_PATH.search(s) else "medium", f"{path}: concealment: {m.group(0)}"))
         m = _STRONG_PATH.search(s)
         if m:
             out.append(_f("sensitive_resource_request", "high", f"{path}: references {m.group(0)}"))
@@ -103,7 +106,7 @@ def scan(manifest: dict, approved: list[tuple[str, str]] = (), known_tools: set[
         if m and not path.startswith("tool.name"):
             sev = "high" if _ACTION.search(s) else ("medium" if _IP_OR_LOCAL.search(m.group(0)) else "low")
             out.append(_f("external_exfiltration", sev, f"{path}: destination {m.group(0)}"))
-        for other in known_tools - {name}:
+        for other in () if path.startswith("server_instructions") else known_tools - {name}:  # server text names its own tools; not a cross-tool instruction
             if re.search(rf"\b{re.escape(other)}\b", s):
                 out.append(_f("cross_tool_instruction", "medium", f"{path}: references tool {other}"))
     props = (tool.get("inputSchema") or {}).get("properties") or {}

@@ -1,0 +1,16 @@
+{
+ "label": "after_v4_rules",
+ "set_frozen_intact": true,
+ "poisoned": 20,
+ "benign": 20,
+ "recall_blocked_pct": 95.0,
+ "recall_flagged_pct": 100.0,
+ "benign_acceptance_pct": 100.0,
+ "missed": [],
+ "not_blocked": [
+  "q14"
+ ],
+ "benign_blocked_pct": 0.0,
+ "blocked_false_positives": [],
+ "false_positives": []
+}

@@ -28,7 +28,7 @@ mans = [build_manifest(c["tool"], "srv-eval") for c in cases]
 sfs = [scan(m) for m in mans]
 rows = [(c, eligibility(sf, True).action) for c, sf in zip(cases, sfs)]
 llm_rows, comb_rows, unavailable = [], [], 0
-if resolve_key(os.environ.get("ANALYZER_PROVIDER")):
+if not os.environ.get("NO_LLM") and resolve_key(os.environ.get("ANALYZER_PROVIDER")):
     live = LiveAnalyzer(httpx.AsyncClient())
 
     async def run():
@@ -59,6 +59,8 @@ res = {"label": sys.argv[1] if len(sys.argv) > 1 else "run", "set_frozen_intact"
        "recall_flagged_pct": pct(sum(a != "allow" for _, a in pos), len(pos)),
        "benign_acceptance_pct": pct(sum(a == "allow" for _, a in neg), len(neg)),
        "missed": [c["id"] for c, a in pos if a == "allow"], "not_blocked": [c["id"] for c, a in pos if a != "block"],
+       "benign_blocked_pct": pct(sum(a == "block" for _, a in neg), len(neg)),
+       "blocked_false_positives": [c["id"] for c, a in neg if a == "block"],
        "false_positives": [c["id"] for c, a in neg if a != "allow"]}
 if llm_rows:
     res.update(llm=stats(llm_rows), combined=stats(comb_rows), llm_unavailable=unavailable)

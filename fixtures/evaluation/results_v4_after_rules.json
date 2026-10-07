@@ -1,0 +1,28 @@
+{
+ "label": "after_rules",
+ "set_frozen_intact": true,
+ "poisoned": 12,
+ "benign": 12,
+ "recall_blocked_pct": 66.7,
+ "recall_flagged_pct": 75.0,
+ "benign_acceptance_pct": 66.7,
+ "missed": [
+  "w05",
+  "w07",
+  "w10"
+ ],
+ "not_blocked": [
+  "w04",
+  "w05",
+  "w07",
+  "w10"
+ ],
+ "benign_blocked_pct": 0.0,
+ "blocked_false_positives": [],
+ "false_positives": [
+  "x01",
+  "x02",
+  "x11",
+  "x12"
+ ]
+}

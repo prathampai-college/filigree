@@ -12,3 +12,4 @@ def test_frozen_evaluation_sets_unchanged():
     assert _sha("authored.json", "public_heldout.json", "evasive.json") == (EV / "FROZEN.sha256").read_text().strip()
     assert _sha("v2.json") == (EV / "FROZEN_v2.sha256").read_text().strip()
     assert _sha("v3.json") == (EV / "FROZEN_v3.sha256").read_text().strip()
+    assert _sha("v4.json") == (EV / "FROZEN_v4.sha256").read_text().strip()
