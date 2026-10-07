@@ -54,7 +54,7 @@ How to read it, honestly:
   *medium* cross-tool finding (human review, not a block). That same rule also puts 12.2% of the clean tools into review. Prefer the
   77.5% figure for "flagged for a reason other than naming a sibling tool".
 - Review is a human step, not protection by itself: a reviewer who approves a plausible-looking description is exactly the attack.
-- The LLM analyzer is the stage meant to close this gap; see Result 2.
+- The LLM analyzer is the stage meant to close this gap; see Result 2 (87.5% blocked on a 40-case held-out sample, at the price of one clean tool blocked in 20).
 - The MCPTox benchmark measures whether *models obey* poisoned tools. Whether a given description is also something a static
   scanner can recognise was not what the authors designed it for, so this is a hard test for text rules by construction.
 
@@ -92,7 +92,22 @@ What this rule does not do: an attack that does not name a sibling tool, or says
 each analysed by the live analyzer (Groq `openai/gpt-oss-120b`, temperature 0, one call per case, ~12 s apart to respect the free
 tier) and compared with the scanner on the same sample. A sample, not the full set, because the free tier allows about 5 calls a minute.
 
-RESULT_2_PLACEHOLDER
+Sampled from the **held-out half** with the current rules (so it is the clean half): 40 poisoned + 20 benign, 0 analyzer failures
+(`results_mcptox_corpus_llm_sample.json`). Same 60 cases, scanner alone vs scanner + LLM:
+
+| | Poisoned blocked | Poisoned flagged | Benign accepted | Benign blocked |
+|---|---|---|---|---|
+| scanner alone | 70.0% (28/40) | 97.5% | 95.0% (19/20) | 0% |
+| scanner + LLM (gpt-oss-120b) | **87.5%** (35/40) | 100% | 90.0% (18/20) | **5.0% (1/20)** |
+
+The LLM added 7 blocks and removed none. Cost: one clean tool blocked (`Fetch / fetch`) and one sent to review
+(`HyperBrowser / browser_use_agent`). **N is small (40 and 20): treat the differences as indicative**; one extra false positive
+is a 5-point swing on the benign side, and the 28/40 scanner figure here differs from the 73.0% on all 200 held-out cases only
+by sampling. The model was shown the scanner findings, as in the product, so this is not a model-only measurement. Results here
+are from the live model on one day; they are not replayed.
+
+How to rerun: `uv run --project backend python scripts/evaluate_real.py fixtures/external/mcptox_corpus.json llm --split test --llm-sample 40 20`
+(needs an analyzer key in `.env`; about 25 minutes on the Groq free tier).
 
 ## What this changes in how we describe Filigree
 - Say: "on an independent benchmark of real tool poisonings (MCPTox), the first run of our scanner blocked 14.8%; after adding a rule for tools that steer other tools, developed on half the servers, it blocks 73.0% of the held-out half with 1.4% of clean tools blocked".

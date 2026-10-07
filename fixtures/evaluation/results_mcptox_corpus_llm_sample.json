@@ -1,0 +1,22 @@
+{
+ "corpus": "mcptox_corpus.json",
+ "model": "groq/openai/gpt-oss-120b",
+ "seed": 0,
+ "split": "test",
+ "poisoned": 40,
+ "benign": 20,
+ "analysed": 60,
+ "llm_unavailable": 0,
+ "scanner": {
+  "recall_blocked_pct": 70.0,
+  "recall_flagged_pct": 97.5,
+  "benign_acceptance_pct": 95.0,
+  "benign_blocked_pct": 0.0
+ },
+ "scanner_plus_llm": {
+  "recall_blocked_pct": 87.5,
+  "recall_flagged_pct": 100.0,
+  "benign_acceptance_pct": 90.0,
+  "benign_blocked_pct": 5.0
+ }
+}
